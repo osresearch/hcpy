@@ -75,6 +75,46 @@ RX: {'sID': 2354590730, 'msgID': 3182729968, 'resource': '/ci/services', 'versio
 RX: {'sID': 2354590730, 'msgID': 3182729969, 'resource': '/iz/info', 'version': 1, 'action': 'RESPONSE', 'data': [{'deviceID': '....', 'eNumber': 'SX65EX56CN/11', 'brand': 'SIEMENS', 'vib': 'SX65EX56CN', 'mac': '....', 'haVersion': '1.4', 'swVersion': '3.2.10.20200911163726', 'hwVersion': '2.0.0.2', 'deviceType': 'Dishwasher', 'deviceInfo': '', 'customerIndex': '11', 'serialNumber': '....', 'fdString': '0201', 'shipSki': '....'}]}
 ```
 
+## Feature UID mapping
+
 There are other things that can be hooked in the application
 to get the mappings of the `uid` to actual menu settings and
-XML files of the configuratio parameters.  TODO: document this.
+XML files of the configuration parameters.
+
+In the `xml/` directory are some of the device descriptions
+and feature maps that the app downloads from the Home Connect
+servers.  Note that the XML has unadorned hex, while the
+websocket messages are in decimal.
+
+For instance, when the dishwasher door is closed and then
+re-opened, it sends the messages for `'uid':512`, which is 0x020F hex:
+
+```
+RX: {... 'data': [{'uid': 527, 'value': 1}]}
+RX: {... 'data': [{'uid': 527, 'value': 0}]}
+```
+
+In the `xml/dishwasher-description.xml` there is a `statusList`
+that says uid 0x020f is a readonly value that uses enum 0x0201:
+
+```
+    <status access="read" available="true" enumerationType="0201" refCID="03" refDID="80" uid="020F"/>
+```
+
+In the `xml/dishwasher-featuremap.xml` there is a mapping of feature
+reference UIDs to names:
+
+```
+    <feature refUID="020F">BSH.Common.Status.DoorState</feature>
+```
+
+as well as mappings of enum ids to enum names and values:
+
+```
+    <enumDescription enumKey="BSH.Common.EnumType.DoorState" refENID="0201">
+      <enumMember refValue="0">Open</enumMember>
+      <enumMember refValue="1">Closed</enumMember>
+    </enumDescription>
+```
+
+
