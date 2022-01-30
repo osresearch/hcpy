@@ -1,3 +1,5 @@
+![dishwasher installed in a kitchen](images/dishwasher.jpg)
+
 # Interface with Home Connect appliances in Python
 
 This is a very, very beta interface for Bosch-Siemens Home Connect
@@ -11,7 +13,13 @@ interface to subscribe to events.
 
 ## Finding the PSK
 
-You'll need to find the PSK for your devices with a rooted
+![application setup screen](images/network-setup.jpg)
+
+You will need to set the dishwasher to "`Local network only`"
+in the setup application so that your phone will connect
+directly to it, rather than going through the cloud services.
+
+You'll also need to find the PSK for your devices with a rooted
 Android phone and the `find-psk.frida` script for Frida.
 
 ```
