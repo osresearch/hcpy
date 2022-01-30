@@ -1,0 +1,86 @@
+/*
+ * Locate the TLS PSK used by the dishwasher as the password that
+ * protects access over the network.
+ *
+ * Launch it with:
+ * frida --no-pause -f com.bshg.homeconnect.android.release -U -l find-psk.frida
+ *
+ * This will also dump all of the cleartext SSL traffic before encryption
+ * and after decryption.  For websocket traffic from the server, this
+ * will be in the clear, although to the server is masked with an XOR
+ * value.
+ *
+ * Note that it has to delay the Interceptor attach calls until the
+ * library has been dlopen()'ed by the application, which is why there
+ * is a setTimeout().
+ *
+ * TODO: Is the PSK deterministic or is it randomly generated and stored
+ * in the cloud?
+ *
+ * TODO: XOR unmask the websock TX traffic
+ */
+
+
+setTimeout(() => {
+console.log("looking for libHCPService.so");
+
+const SSL_get_servername = new NativeFunction(
+	Module.getExportByName("libHCPService.so", "SSL_get_servername"),
+	"pointer",
+	["pointer","int"]
+);
+
+Interceptor.attach(Module.getExportByName("libHCPService.so", "SSL_read"),
+{
+	onEnter(args) {
+		this.ssl = args[0];
+		this.buf = args[1];
+	},
+	onLeave(retval) {
+		const server_ptr = SSL_get_servername(this.ssl, 0);
+		const server = server_ptr.readUtf8String();
+
+		retval |= 0;
+		if (retval <= 0)
+			return;
+
+		console.log("RX", server);
+		console.log(Memory.readByteArray(this.buf, retval));
+	},
+})
+
+Interceptor.attach(Module.getExportByName("libHCPService.so", "SSL_write"),
+{
+	onEnter(args) {
+		this.ssl = args[0];
+		const len = Number(args[2]);
+		const server_ptr = SSL_get_servername(this.ssl, 0);
+		const server = server_ptr.readUtf8String();
+
+		console.log("TX", server);
+		console.log(Memory.readByteArray(args[1], len));
+	},
+})
+
+/*
+ * hcp::client_psk_callback is called when OpenSSL has made a connection and
+ * the server has offered a client hint.
+ */
+Interceptor.attach(Module.getExportByName("libHCPService.so", "_ZN3hcp19client_psk_callbackEP6ssl_stPKcPcjPhj"),
+{
+	onEnter(args) {
+		this.ssl = args[0];
+		this.identity = args[2];
+		this.psk_buf = args[4];
+		const hint = Memory.readUtf8String(args[1]);
+		console.log("psk callback hint '" + hint + "'");
+	},
+	onLeave(len) {
+		len |= 0;
+		console.log("psk", len, this.psk_buf);
+		const buf = Memory.readByteArray(this.psk_buf, len);
+		console.log(buf);
+	},
+})
+
+}, 1000)
