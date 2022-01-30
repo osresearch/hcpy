@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<device xmlns="http://www.home-connect.com/schemas/DeviceDescription/20140417" xmlns:xi="http://www.w3.org/2001/XInclude" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" treatment="lazy" xsi:schemaLocation="https://www.home-connect.com/schemas/DeviceDescription/20140417 HC_INT_BSH_DeviceDescription.xsd">
+  <xi:include href="https://www.home-connect.com/schemas/DeviceDescription/20140417/HC_INT_BSH_CTD.xml" parse="xml">
+    <xi:fallback>
+      <error>xinclude error: file "HC_INT_BSH_CTD.xml" not found</error>
+    </xi:fallback>
+  </xi:include>
+  <xi:include href="https://www.home-connect.com/schemas/DeviceDescription/20140417/HC_INT_BSH_DTD.xml" parse="xml">
+    <xi:fallback>
+      <error>xinclude error: file "HC_INT_BSH_DTD.xml" not found</error>
+    </xi:fallback>
+  </xi:include>
+  <xi:include href="https://www.home-connect.com/schemas/DeviceDescription/20140417/HC_INT_BSH_DEV.xml" parse="xml">
+    <xi:fallback>
+      <error>xinclude error: file "HC_INT_BSH_DEV.xml" not found</error>
+    </xi:fallback>
+  </xi:include>
+  <description>
+    <type>Dishwasher</type>
+    <brand>SIEMENS</brand>
+    <model>SX65EX56CN</model>
+    <version>1</version>
+    <revision>1</revision>
+    <pairableDeviceTypes>
+      <deviceType>Application</deviceType>
+    </pairableDeviceTypes>
+  </description>
+  <statusList access="read" available="true" uid="0102">
+    <status access="read" available="true" refCID="01" refDID="00" uid="0005"/>
+    <status access="read" available="true" refCID="01" refDID="00" uid="0205"/>
+    <status access="read" available="true" refCID="01" refDID="00" uid="020B"/>
+    <status access="read" available="true" enumerationType="0201" refCID="03" refDID="80" uid="020F"/>
+    <status access="read" available="true" enumerationType="0203" refCID="03" refDID="80" uid="0228"/>
+    <status access="read" available="true" refCID="26" refDID="83" uid="0250"/>
+    <status access="read" available="true" enumerationType="1005" refCID="03" refDID="80" uid="1000"/>
+    <status access="read" available="true" refCID="10" refDID="82" uid="1005"/>
+    <status access="read" available="true" refCID="01" refDID="00" uid="1007"/>
+  </statusList>
+  <settingList access="readWrite" available="true" uid="0103">
+    <setting access="readWrite" available="true" refCID="01" refDID="00" uid="0003"/>
+    <setting access="readWrite" available="true" enumerationType="0204" refCID="03" refDID="80" uid="021B"/>
+    <setting access="readWrite" available="true" enumerationType="0221" refCID="03" refDID="80" uid="000F"/>
+    <setting access="readWrite" available="true" enumerationType="1000" refCID="03" refDID="80" uid="1102"/>
+    <setting access="readWrite" available="true" refCID="01" refDID="00" uid="1104"/>
+    <setting access="readWrite" available="true" max="1800" min="60" refCID="10" refDID="82" stepSize="60" uid="111E"/>
+    <setting access="readWrite" available="true" enumerationType="1004" refCID="03" refDID="80" uid="1103"/>
+    <setting access="readWrite" available="true" enumerationType="100A" refCID="03" refDID="80" uid="1105"/>
+    <setting access="readWrite" available="true" enumerationType="1008" refCID="03" refDID="80" uid="110A"/>
+    <setting access="readWrite" available="true" enumerationType="100B" refCID="03" refDID="80" uid="110B"/>
+    <setting access="readWrite" available="true" enumerationType="1001" refCID="03" refDID="80" uid="110C"/>
+    <setting access="readWrite" available="true" enumerationType="1002" refCID="03" refDID="80" uid="110D"/>
+    <setting access="readWrite" available="true" enumerationType="1009" refCID="03" refDID="80" uid="110F"/>
+    <setting access="readWrite" available="true" enumerationType="100F" refCID="03" refDID="80" uid="111D"/>
+    <setting access="read" available="false" refCID="01" refDID="00" uid="1120"/>
+  </settingList>
+  <eventList uid="0104">
+    <event enumerationType="0001" handling="acknowledge" level="hint" refCID="03" refDID="80" uid="0015"/>
+    <event enumerationType="0001" handling="none" level="hint" refCID="03" refDID="80" uid="002E"/>
+    <event enumerationType="0001" handling="none" level="critical" refCID="03" refDID="80" uid="020D"/>
+    <event enumerationType="0001" handling="none" level="hint" refCID="03" refDID="80" uid="021C"/>
+    <event enumerationType="0001" handling="none" level="alert" refCID="03" refDID="80" uid="021F"/>
+    <event enumerationType="0001" handling="acknowledge" level="hint" refCID="03" refDID="80" uid="0221"/>
+    <event enumerationType="0001" handling="none" level="warning" refCID="03" refDID="80" uid="0241"/>
+    <event enumerationType="0001" handling="acknowledge" level="hint" refCID="03" refDID="80" uid="0251"/>
+    <event enumerationType="0001" handling="acknowledge" level="hint" refCID="03" refDID="80" uid="0253"/>
+    <event enumerationType="0001" handling="none" level="alert" refCID="03" refDID="80" uid="1200"/>
+    <event enumerationType="0001" handling="none" level="alert" refCID="03" refDID="80" uid="1201"/>
+    <event enumerationType="0001" handling="none" level="alert" refCID="03" refDID="80" uid="1202"/>
+    <event enumerationType="0001" handling="none" level="alert" refCID="03" refDID="80" uid="1203"/>
+    <event enumerationType="0001" handling="none" level="alert" refCID="03" refDID="80" uid="1204"/>
+    <event enumerationType="0001" handling="none" level="alert" refCID="03" refDID="80" uid="1205"/>
+    <event enumerationType="0001" handling="none" level="hint" refCID="03" refDID="80" uid="1211"/>
+    <event enumerationType="0001" handling="none" level="hint" refCID="03" refDID="80" uid="1213"/>
+    <event enumerationType="0001" handling="none" level="hint" refCID="03" refDID="80" uid="1210"/>
+    <event enumerationType="0001" handling="none" level="hint" refCID="03" refDID="80" uid="1212"/>
+    <event enumerationType="0001" handling="acknowledge" level="hint" refCID="03" refDID="80" uid="1214"/>
+  </eventList>
+  <commandList access="writeOnly" available="true" uid="0105">
+    <command access="writeOnly" available="true" refCID="01" refDID="00" uid="0001"/>
+    <command access="writeOnly" available="true" refCID="15" refDID="81" uid="0006"/>
+    <command access="writeOnly" available="true" refCID="15" refDID="81" uid="0010"/>
+    <command access="none" available="true" refCID="01" refDID="00" uid="0200"/>
+    <command access="writeOnly" available="true" refCID="01" refDID="00" uid="0229"/>
+    <command access="writeOnly" available="true" refCID="01" refDID="00" uid="022B"/>
+    <command access="writeOnly" available="true" refCID="01" refDID="00" uid="023F"/>
+    <command access="writeOnly" available="true" refCID="01" refDID="00" uid="0252"/>
+    <command access="writeOnly" available="true" refCID="18" refDID="81" uid="022C"/>
+    <command access="writeOnly" available="true" refCID="01" refDID="00" uid="1300"/>
+  </commandList>
+  <optionList access="readWrite" available="true" uid="0106">
+    <option access="read" available="true" refCID="11" refDID="A0" uid="021E"/>
+    <option access="read" available="true" refCID="10" refDID="82" uid="0220"/>
+    <option access="read" available="true" initValue="1" refCID="01" refDID="00" uid="0225"/>
+    <option access="read" available="true" max="86400" min="0" refCID="10" refDID="82" uid="022E"/>
+    <option access="read" available="true" refCID="11" refDID="A0" uid="0231"/>
+    <option access="read" available="true" refCID="11" refDID="A0" uid="0232"/>
+    <option access="readWrite" available="true" default="false" refCID="01" refDID="00" uid="1410"/>
+    <option access="readWrite" available="true" default="false" refCID="01" refDID="00" uid="1404"/>
+    <option access="readWrite" available="true" default="false" refCID="01" refDID="00" uid="1406"/>
+    <option access="readWrite" available="true" default="false" refCID="01" refDID="00" uid="1407"/>
+  </optionList>
+  <programGroup available="true" uid="0107">
+    <program available="true" uid="2000">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1404"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1406"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1407"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+    <program available="true" uid="2003">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1404"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1406"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1407"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+    <program available="true" uid="2004">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1404"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1406"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1407"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+    <program available="true" uid="2005">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1404"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1406"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1407"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+    <program available="true" uid="2007">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+    <program available="true" uid="2008">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+    <program available="true" uid="200A">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1404"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1406"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1407"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+    <program available="true" uid="200B">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+    <program available="true" uid="2017">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+    <program available="true" uid="201C">
+      <option access="readWrite" available="true" liveUpdate="false" refUID="022E"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1404"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1406"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1407"/>
+      <option access="readWrite" available="true" liveUpdate="true" refUID="1410"/>
+    </program>
+  </programGroup>
+  <activeProgram access="readWrite" uid="0100"/>
+  <selectedProgram access="readWrite" fullOptionSet="false" uid="0101"/>
+  <enumerationTypeList>
+    <enumerationType enid="1005">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+      <enumeration value="3"/>
+      <enumeration value="4"/>
+    </enumerationType>
+    <enumerationType enid="1009">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+      <enumeration value="3"/>
+      <enumeration value="4"/>
+      <enumeration value="5"/>
+      <enumeration value="6"/>
+      <enumeration value="7"/>
+    </enumerationType>
+    <enumerationType enid="1001">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+      <enumeration value="3"/>
+    </enumerationType>
+    <enumerationType enid="0001">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+    </enumerationType>
+    <enumerationType enid="1004">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+    </enumerationType>
+    <enumerationType enid="1008">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+    </enumerationType>
+    <enumerationType enid="0203">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+      <enumeration value="3"/>
+      <enumeration value="4"/>
+      <enumeration value="5"/>
+      <enumeration value="6"/>
+      <enumeration value="7"/>
+      <enumeration value="8"/>
+    </enumerationType>
+    <enumerationType enid="0201">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+    </enumerationType>
+    <enumerationType enid="0221">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+    </enumerationType>
+    <enumerationType enid="1000">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+      <enumeration value="3"/>
+      <enumeration value="4"/>
+      <enumeration value="5"/>
+      <enumeration value="6"/>
+    </enumerationType>
+    <enumerationType enid="100B">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+    </enumerationType>
+    <enumerationType enid="0204">
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+    </enumerationType>
+    <enumerationType enid="100A">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+    </enumerationType>
+    <enumerationType enid="100F">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+    </enumerationType>
+    <enumerationType enid="1002">
+      <enumeration value="0"/>
+      <enumeration value="1"/>
+      <enumeration value="2"/>
+      <enumeration value="3"/>
+    </enumerationType>
+  </enumerationTypeList>
+</device>
