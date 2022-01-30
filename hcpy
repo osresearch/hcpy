@@ -9,6 +9,7 @@ import sys
 import json
 import re
 import time
+from datetime import datetime
 
 
 # Monkey patch for sslpsk in pip using the old _sslobj
@@ -19,6 +20,8 @@ def _sslobj(sock):
         return sock._sslobj
 sslpsk.sslpsk._sslobj = _sslobj
 
+def now():
+	return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
 
 debug = False
 host = '10.1.0.133'
@@ -39,10 +42,10 @@ ssl_sock = sslpsk.wrap_socket(
 
 ws = None
 def tx(msg):
+	print(now(), "TX:", msg)
 	buf = json.dumps(msg, separators=(',', ':') )
 	# swap " for '
 	buf = re.sub("'", '"', buf)
-	print("TX:", buf)
 	ws.send(buf)
 
 def send_initial_messages():
@@ -81,7 +84,8 @@ def send_initial_messages():
 def handle_message(buf):
 	global session_id, msg_id
 	msg = json.loads(buf)
-	print("RX:", msg)
+	print(now(), "RX:", msg)
+	sys.stdout.flush()
 
 	# first message from the device establishes the session etc
 	# {'sID': 926468163, 'msgID': 3785595876, 'resource': '/ei/initialValues', 'version': 2, 'action': 'POST', 'data': [{'edMsgID': 2569124008}]}
