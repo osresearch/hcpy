@@ -9,8 +9,13 @@ import sys
 import json
 import re
 import time
+import io
 from datetime import datetime
 
+# read in a macihne description if provided
+if len(sys.argv) > 1:
+	with io.open(sys.argv[1], "r") as fp:
+		machine = json.load(fp)
 
 # Monkey patch for sslpsk in pip using the old _sslobj
 def _sslobj(sock):
@@ -112,6 +117,26 @@ def handle_message(buf):
 		send_initial_messages()
 
 	# do other stuff?
+	if machine and "data" in msg:
+		for el in msg["data"]:
+			if "uid" not in el:
+				continue
+			uid = str(el["uid"])
+			if not(uid in machine["status"]):
+				continue
+
+			status = machine["status"][uid]
+			value = str(el["value"])
+
+			if "values" in status and value in status["values"]:
+				value = status["values"][value]
+
+			print(status["name"] + "=" + value)
+				
+
+#session_id = "1"
+#handle_message('{"sID": 2887352564, "msgID": 195493504, "resource": "/ro/values", "version": 1, "action": "NOTIFY", "data": [{"uid": 527, "value": 1}]}')
+#exit(0)
 
 if debug:
 	websocket.enableTrace(True)
@@ -130,4 +155,7 @@ while True:
 	buf = ws.recv()
 	if buf is None or buf == "":
 		continue
-	handle_message(buf)
+	try:
+		handle_message(buf)
+	except Exception as e:
+		print("error handling msg", e, buf)
