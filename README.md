@@ -60,6 +60,20 @@ repeating 4-byte XOR that is sent in the first part of each messages.
 The script could be augmented to decode those as well.
 The replies from the device are not masked so they can be read in the clear.
 
+## Retrieving home appliance configuration
+
+```
+frida-trace -o initHomeAppliance.log -f "com.bshg.homeconnect.android.release" -U -j '*!initHomeAppliance''
+```
+
+PSK can also be found in the last section of the config as base64url encoded.
+
+```
+echo 'Dsgf2MZJ-ti85_00M1QT1HP5LgH82CaASYlMGdcuzcs"' | tr '_\-"' '/+=' | base64 -d | xxd -g1
+```
+
+
+
 ## hcpy
 
 The `hcpy` tool can contact your device, and if the PSK is correct, it will
