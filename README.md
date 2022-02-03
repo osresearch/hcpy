@@ -10,16 +10,27 @@ interface to subscribe to events.
 
 *WARNING: This is not ready for prime time!*
 
-The dishwasher has a local HTTPS port open (and the dryer
-seems to have unencrypted HTTP).  Attempting to connect to
+The dishwasher has a local HTTPS port open.  Attempting to connect to
 the HTTPS port with `curl` results in a cryptic protocol error
 due to the non-standard cipher selection, `ECDHE-PSK-CHACHA20-POLY1305`.
 PSK also requires that both sides agree on a symetric key,
 so it is necessary to figure out what that key is before any
 further progress can be made.
 
+The clothes washer has a local HTTP port that also responds to websocket
+traffic, although the contents of the frames are AES-CBC encrypted with a key
+derived from the PSK and authenticated with SHA256-HMAC using another
+key derived from the PSK.  It is also necessary to find the IV for the AES
+encryption to communicate with the washer.
 
-## Finding the PSK
+Despite the usual reputation for bad IoT security, Bosch-Siemens seem to
+have done a decent job of designing their system, especially since they
+considered a no-cloud local control configuration.  The protocols seem
+sound and should prevent most any random attacker on your network from
+being able to take over your appliances to mine cryptocurrency.
+
+
+## Finding the PSK (and IV)
 
 ![application setup screen](images/network-setup.jpg)
 
@@ -72,9 +83,15 @@ PSK can also be found in the last section of the config as base64url encoded.
 echo 'Dsgf2MZJ-ti85_00M1QT1HP5LgH82CaASYlMGdcuzcs"' | tr '_\-"' '/+=' | base64 -d | xxd -g1
 ```
 
+The IV is also there for devices that use it.  This needs better documentation.
+
+TODO: document the other frida scripts that do `sendmsg()` and `Encrypt()` / `Decrypt()` tracing
+
 
 
 ## hcpy
+
+![laptop in a dishwasher](images/laptop.jpg)
 
 The `hcpy` tool can contact your device, and if the PSK is correct, it will
 register for notification of events.
