@@ -7,124 +7,35 @@ import re
 import time
 import io
 from HCSocket import HCSocket, now
+from HCDevice import HCDevice
 
-#host = '10.1.0.145'
-#psk64 = 'KlRQQyG8AkEfRFPr0v7vultz96zcal5lxj2fAc2ohaY'
-#iv64 = 'tTUvqcsBldtkhHvDwE2DpQ'
-
-host = "10.1.0.133"
-psk64 = "Dsgf2MZJ-ti85_00M1QT1HP5LgH82CaASYlMGdcuzcs="
-iv64 = None # no iv == https
+if True:
+	# clothes dryer
+	#  RX:{'service': 'ro', 'version': 1}
+	#  {'service': 'ei', 'version': 2}
+	#  {'service': 'ci', 'version': 2}
+	#  {'service': 'ni', 'version': 1}]}
+	host = '10.1.0.145'
+	psk64 = 'KlRQQyG8AkEfRFPr0v7vultz96zcal5lxj2fAc2ohaY'
+	iv64 = 'tTUvqcsBldtkhHvDwE2DpQ'
+else:
+	# dish washer
+	# RX: {"service":"ci","version":3}
+	# {"service":"ei","version":2}
+	# {"service":"iz","version":1}
+	# {"service":"ni","version":1}
+	# {"service":"ro","version":1}]}
+	host = "10.1.0.133"
+	psk64 = "Dsgf2MZJ-ti85_00M1QT1HP5LgH82CaASYlMGdcuzcs="
+	iv64 = None # no iv == https
 
 ws = HCSocket(host, psk64, iv64)
+dev = HCDevice(ws)
 
-# read in a machine description if provided
-machine = None
-if len(sys.argv) > 1:
-	with io.open(sys.argv[1], "r") as fp:
-		machine = json.load(fp)
-
-session_id = None
-tx_msg_id = None
-
-
-def send_initial_messages():
-	global session_id, tx_msg_id
-	# subscribe to stuff
-	ws.send({
-		"sID": session_id,
-		"msgID": tx_msg_id,
-		"resource": "/ci/services",
-		"version": 1,
-		"action": "GET",
-	})
-
-	tx_msg_id += 1
-
-	ws.send({
-		"sID": session_id,
-		"msgID": tx_msg_id,
-		"resource": "/iz/info",
-		"version": 1,
-		"action": "GET",
-	})
-
-	tx_msg_id += 1
-
-	ws.send({
-		"sID": session_id,
-		"msgID": tx_msg_id,
-		"resource": "/ei/deviceReady",
-		"version": 2,
-		"action": "NOTIFY",
-	})
-
-	tx_msg_id += 1
-
-def handle_message(buf):
-	global session_id, tx_msg_id
-	msg = json.loads(buf)
-	print(now(), "RX:", msg)
-	sys.stdout.flush()
-
-	# first message from the device establishes the session etc
-	# {'sID': 926468163, 'msgID': 3785595876, 'resource': '/ei/initialValues', 'version': 2, 'action': 'POST', 'data': [{'edMsgID': 2569124008}]}
-	# {"sID":2642355413,"msgID":1520318190,"resource":"/ei/initialValues","version":2,"action":"RESPONSE","data":[{"deviceType":"Application","deviceName":"Pixel","deviceID":"d304ee06571f0d09"}]}
-	# {"sID":1651311247,"msgID":3920866429,"resource":"/ei/initialValues","version":2,"action":"RESPONSE","data":[{"deviceType":"Application","deviceName":"Pixel","deviceID":"d304ee06571f0d09"}]}
-	if session_id == None:
-		session_id = msg["sID"]
-		tx_msg_id = msg["data"][0]["edMsgID"]
-
-		# reply with a response and our initial get
-		ws.send({
-			'sID': session_id,
-			'msgID': msg["msgID"], # same one they sent to us
-			'resource': msg["resource"],
-			'version': msg["version"],
-			'action': 'RESPONSE',
-			'data': [{
-				"deviceType": "Application",
-				#"deviceName": "py-hca",
-				#"deviceID": "1234",
-				"deviceName": "Pixel",
-				"deviceID": "d304ee06571f0d09",
-			}],
-		})
-
-		ws.send({
-			"sID": session_id,
-			"msgID": tx_msg_id,
-			"resource": "/ci/services",
-			"version": 1,
-			"action": "GET",
-		})
-
-		tx_msg_id += 1
-		send_initial_messages()
-
-	# do other stuff?
-	if machine and "data" in msg:
-		for el in msg["data"]:
-			if "uid" not in el:
-				continue
-			uid = str(el["uid"])
-			if not(uid in machine["status"]):
-				continue
-
-			status = machine["status"][uid]
-			value = str(el["value"])
-
-			if "values" in status and value in status["values"]:
-				value = status["values"][value]
-
-			print(status["name"] + "=" + value)
-				
 while True:
-	buf = ws.recv()
-	if buf is None or buf == "":
-		continue
-
 	try:
-		handle_message(buf)
+		buf = dev.recv()
 	except Exception as e:
 		print("error handling msg", e, buf)
+		time.sleep(5)
+		ws.reconnect()
