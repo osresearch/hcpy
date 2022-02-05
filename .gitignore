@@ -1,0 +1,8 @@
+.*.swp
+__*
+*.asc
+*.log
+*.bin
+*.key
+*.ws
+*.enc
