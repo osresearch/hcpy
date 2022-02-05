@@ -100,4 +100,4 @@ machine = {
 	"errors": errors,
 }
 
-print(json.dumps(machine))
+print(json.dumps(machine, indent=4))
