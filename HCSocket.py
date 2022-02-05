@@ -143,10 +143,10 @@ class HCSocket:
 		)
 
 	def send(self, msg):
-		print(now(), "TX:", msg)
 		buf = json.dumps(msg, separators=(',', ':') )
 		# swap " for '
 		buf = re.sub("'", '"', buf)
+		print(now(), "TX:", buf)
 		if self.http:
 			self.ws.send_binary(self.encrypt(buf))
 		else:
@@ -162,5 +162,5 @@ class HCSocket:
 		if buf is None:
 			return None
 
-		print(now(), "RX:", buf)
+		#print(now(), "RX:", buf)
 		return buf
