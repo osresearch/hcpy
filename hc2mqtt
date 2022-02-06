@@ -70,13 +70,26 @@ def client_connect(device_name, device):
 					value = msg.get(topic, None)
 					if value is None:
 						continue
-					state[topics[topic]] = value
+
+					# Convert "On" to True, "Off" to False
+					if value == "On":
+						value = True
+					elif value == "Off":
+						value = False
+
+					new_topic = topics[topic]
+					if new_topic == "remaining":
+						state["remainingseconds"] = value
+						value = "%d:%02d" % (value / 60 / 60, (value / 60) % 60)
+
+					state[new_topic] = value
 					update = True
 
 				if not update:
 					continue
 
 				msg = json.dumps(state)
+				print("publish", mqtt_topic, msg)
 				client.publish(mqtt_topic + "/state", msg)
 
 		except Exception as e:
