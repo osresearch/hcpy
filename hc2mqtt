@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-# Contact a Bosh-Siemens Home Connect device
-# and connect it to the mqtt server
+# Contact Bosh-Siemens Home Connect devices
+# and connect their messages to the mqtt server
 import sys
 import json
 import re
 import time
 import io
+from threading import Thread
 from HCSocket import HCSocket, now
 from HCDevice import HCDevice
 import paho.mqtt.client as mqtt
@@ -13,11 +14,6 @@ import paho.mqtt.client as mqtt
 mqtt_prefix = "homeconnect/"
 client = mqtt.Client()
 client.connect("dashboard", 1883, 70)
-
-device_name = 'dishwasher'
-
-if len(sys.argv) > 1:
-	device_name = sys.argv[1]
 
 devices = {
 	'clothes': {
@@ -32,14 +28,7 @@ devices = {
 	},
 }
 
-device = devices.get(device_name, None)
-
-if not device:
-	print(device_name, " not known", file=sys.stderr)
-	exit(1)
-
-mqtt_topic = mqtt_prefix + device_name
-
+# Map their value names to easier state names
 topics = {
 	"OperationState": "state",
 	"DoorState": "door",
@@ -51,40 +40,51 @@ topics = {
 	"FatalErrorOccured": "error",
 }
 
-state = {}
-for topic in topics:
-	state[topics[topic]] = None
 
-while True:
-	try:
-		ws = HCSocket(device["host"], device["psk64"], device["iv64"])
-		dev = HCDevice(ws)
 
-		#ws.debug = True
-		ws.reconnect()
+def client_connect(device_name, device):
+	mqtt_topic = mqtt_prefix + device_name
+	host = device["host"]
 
-		while True:
-			msg = dev.recv()
-			if msg is None:
-				break
-			if len(msg) > 0:
-				print(now(), msg)
+	state = {}
+	for topic in topics:
+		state[topics[topic]] = None
 
-			update = False
-			for topic in topics:
-				value = msg.get(topic, None)
-				if value is None:
+	while True:
+		try:
+			ws = HCSocket(host, device["psk64"], device["iv64"])
+			dev = HCDevice(ws)
+
+			#ws.debug = True
+			ws.reconnect()
+
+			while True:
+				msg = dev.recv()
+				if msg is None:
+					break
+				if len(msg) > 0:
+					print(now(), msg)
+
+				update = False
+				for topic in topics:
+					value = msg.get(topic, None)
+					if value is None:
+						continue
+					state[topics[topic]] = value
+					update = True
+
+				if not update:
 					continue
-				state[topics[topic]] = value
-				update = True
 
-			if not update:
-				continue
+				msg = json.dumps(state)
+				client.publish(mqtt_topic + "/state", msg)
 
-			msg = json.dumps(state)
-			client.publish(mqtt_topic + "/state", msg)
+		except Exception as e:
+			print("ERROR", host, e, file=sys.stderr)
 
-	except Exception as e:
-		print("ERROR", device["host"], e, file=sys.stderr)
+		time.sleep(5)
 
-	time.sleep(5)
+for device in devices:
+	thread = Thread(target=client_connect, args=(device, devices[device]))
+	thread.start()
+
