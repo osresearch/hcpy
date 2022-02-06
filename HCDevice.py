@@ -88,6 +88,10 @@ class HCDevice:
 				status = self.machine["options"][uid]
 			elif uid in self.machine["commands"]:
 				status = self.machine["commands"][uid]
+			elif uid in self.machine["events"]:
+				status = self.machine["events"][uid]
+			elif uid in self.machine["features"]:
+				status = self.machine["features"][uid]
 
 			if status:
 				name = status["name"]
