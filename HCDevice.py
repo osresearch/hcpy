@@ -74,7 +74,7 @@ class HCDevice:
 
 	def parse_values(self, values):
 		if not self.machine:
-			return
+			return values
 
 		result = {}
 		
