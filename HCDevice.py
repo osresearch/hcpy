@@ -58,6 +58,7 @@ class HCDevice:
 		self.tx_msg_id = None
 		self.device_name = "hcpy"
 		self.device_id = "0badcafe"
+		self.debug = False
 
 	def load_description(self, device_type):
 		json_file = "xml/" + device_type + ".json"
@@ -82,15 +83,7 @@ class HCDevice:
 			name = uid
 			status = None
 
-			if uid in self.machine["status"]:
-				status = self.machine["status"][uid]
-			elif uid in self.machine["options"]:
-				status = self.machine["options"][uid]
-			elif uid in self.machine["commands"]:
-				status = self.machine["commands"][uid]
-			elif uid in self.machine["events"]:
-				status = self.machine["events"][uid]
-			elif uid in self.machine["features"]:
+			if uid in self.machine["features"]:
 				status = self.machine["features"][uid]
 
 			if status:
@@ -108,8 +101,14 @@ class HCDevice:
 	def recv(self):
 		try:
 			buf = self.ws.recv()
-			self.handle_message(buf)
-			return buf
+			if buf is None:
+				return None
+		except Exception as e:
+			print("receive error", e, traceback.format_exc())
+			return None
+
+		try:
+			return self.handle_message(buf)
 		except Exception as e:
 			print("error handling msg", e, buf, traceback.format_exc())
 			return None
@@ -143,14 +142,22 @@ class HCDevice:
 
 	def handle_message(self, buf):
 		msg = json.loads(buf)
-		print(now(), "RX:", msg)
+		if self.debug:
+			print(now(), "RX:", msg)
 		sys.stdout.flush()
 
 
 		resource = msg["resource"]
 		action = msg["action"]
+
+		values = {}
+
 		if "code" in msg:
-			print(now(), "ERROR", msg["code"])
+			#print(now(), "ERROR", msg["code"])
+			values = {
+				"error": msg["code"],
+				"resource": msg.get("resource", ''),
+			}
 		elif action == "POST":
 			if resource == "/ei/initialValues":
 				# this is the first message they send to us and
@@ -183,14 +190,15 @@ class HCDevice:
 		elif action == "RESPONSE" or action == "NOTIFY":
 			if resource == "/iz/info" or resource == "/ci/info":
 				# see if we have a device file for this model
-				if "data" in msg:
-					device = msg["data"][0]["vib"]
-					self.load_description(device)
+				if not "data" in msg:
+					return values
+				values = msg["data"][0]
+				self.load_description(values["vib"])
 
 			elif resource == "/ro/allMandatoryValues" \
 			or resource == "/ro/values":
 				values = self.parse_values(msg["data"])
-				print(now(), values)
+				#print(now(), values)
 			elif resource == "/ci/registeredDevices":
 				# we don't care
 				pass
@@ -201,7 +209,7 @@ class HCDevice:
 					self.services[service["service"]] = {
 						"version": service["version"],
 					}
-				print(now(), "services", self.services)
+				#print(now(), "services", self.services)
 
 				# we should figure out which ones to query now
 #				if "iz" in self.services:
@@ -217,21 +225,5 @@ class HCDevice:
 				#print(now(), "Unknown reponse", resource)
 				pass
 
-				# we should wait till we know this worked...
-				#self.get("/ei/deviceReady", version=2, action="NOTIFY")
-#			if machine and "data" in msg:
-#				for el in msg["data"]:
-#					if "uid" not in el:
-#						continue
-#					uid = str(el["uid"])
-#			if not(uid in machine["status"]):
-#				continue
-#
-#			status = machine["status"][uid]
-#			value = str(el["value"])
-#
-#			if "values" in status and value in status["values"]:
-#				value = status["values"][value]
-#
-#			print(status["name"] + "=" + value)
-				
+		# return whatever we've parsed out of it
+		return values

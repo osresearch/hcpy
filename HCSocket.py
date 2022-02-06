@@ -36,6 +36,7 @@ class HCSocket:
 	def __init__(self, host, psk64, iv64=None):
 		self.host = host
 		self.psk = base64url(psk64 + '===')
+		self.debug = False
 
 		if iv64:
 			# an HTTP self-encrypted socket
@@ -146,7 +147,8 @@ class HCSocket:
 		buf = json.dumps(msg, separators=(',', ':') )
 		# swap " for '
 		buf = re.sub("'", '"', buf)
-		print(now(), "TX:", buf)
+		if self.debug:
+			print(now(), "TX:", buf)
 		if self.http:
 			self.ws.send_binary(self.encrypt(buf))
 		else:

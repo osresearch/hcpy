@@ -9,7 +9,7 @@ import io
 from HCSocket import HCSocket, now
 from HCDevice import HCDevice
 
-if True:
+if False:
 	# clothes dryer
 	#  RX:{'service': 'ro', 'version': 1}
 	#  {'service': 'ei', 'version': 2}
@@ -29,13 +29,19 @@ else:
 	psk64 = "Dsgf2MZJ-ti85_00M1QT1HP5LgH82CaASYlMGdcuzcs="
 	iv64 = None # no iv == https
 
-ws = HCSocket(host, psk64, iv64)
-dev = HCDevice(ws)
-
 while True:
 	try:
-		buf = dev.recv()
+		ws = HCSocket(host, psk64, iv64)
+		dev = HCDevice(ws)
+
+		while True:
+			msg = dev.recv()
+			if msg is None:
+				break
+			if len(msg) > 0:
+				print(now(), msg)
+			
 	except Exception as e:
-		print("error handling msg", e, buf)
-		time.sleep(5)
-		ws.reconnect()
+		print("ERROR", host, e, file=sys.stderr)
+
+	time.sleep(5)
