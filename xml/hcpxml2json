@@ -24,11 +24,13 @@ features = {}
 errors = {}
 enums = {}
 
-# Features
+# Features are all possible UIDs
 for child in featuremapping[1]: #.iter('feature'):
 	uid = int(child.attrib["refUID"], 16)
 	name = child.text
-	features[uid] = name
+	features[uid] = {
+		"name": name,
+	}
 
 # Errors
 for child in featuremapping[2]: 
@@ -52,33 +54,34 @@ for child in featuremapping[3]:
 
 #####################
 #
-# Parse the description file
+# Parse the description file and collapse everything into a single
+# list of UIDs
 #
 
-def parse_xml_list(entries):
-	parsed = {}
-
+def parse_xml_list(codes, entries):
 	for el in entries:
 		# not sure how to parse refCID and refDID
 		uid = int(el.attrib["uid"], 16)
-		data = {
-			"name": features[uid],
-		}
+
+		if not uid in codes:
+			print("UID", uid, " not known!", file=sys.stderr)
+
+		data = codes[uid];
+		if "uid" in codes:
+			print("UID", uid, " used twice?", data, file=sys.stderr)
 
 		for key in el.attrib:
 			data[key] = el.attrib[key]
 
-		# clean up
-		del data["uid"]
+		# clean up later
+		#del data["uid"]
 
 		if "enumerationType" in el.attrib:
 			del data["enumerationType"]
 			enum_id = int(el.attrib["enumerationType"], 16)
 			data["values"] = enums[enum_id]["values"]
 
-		parsed[uid] = data
-
-	return parsed
+		#codes[uid] = data
 
 def parse_machine_description(entries):
 	description = {}
@@ -90,14 +93,16 @@ def parse_machine_description(entries):
 
 	return description
 
+for i in range(4,8):
+	parse_xml_list(features, description[i])
+
+# remove the duplicate uid field
+for uid in features:
+	if "uid" in features[uid]:
+		del features[uid]["uid"]
+
 machine = {
 	"description": parse_machine_description(description[3]),
-	"status": parse_xml_list(description[4]),
-	"settings": parse_xml_list(description[5]),
-	"events": parse_xml_list(description[6]),
-	"commands": parse_xml_list(description[7]),
-	"options": parse_xml_list(description[8]),
-	"errors": errors,
 	"features": features,
 }
 
