@@ -98,6 +98,7 @@ machine = {
 	"commands": parse_xml_list(description[7]),
 	"options": parse_xml_list(description[8]),
 	"errors": errors,
+	"features": features,
 }
 
 print(json.dumps(machine, indent=4))
