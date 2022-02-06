@@ -46,6 +46,9 @@ import time
 import io
 import traceback
 from datetime import datetime
+from base64 import urlsafe_b64encode as base64url_encode
+from Crypto.Random import get_random_bytes
+
 
 def now():
 	return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -173,7 +176,14 @@ class HCDevice:
 
 				# ask the device which services it supports
 				self.get("/ci/services")
-				#self.get("/ci/authentication", version=2, data={"nonce": "aGVsbG93b3JsZAo="})
+
+				# the clothes washer wants this, the token doesn't matter,
+				# although they do not handle padding characters
+				# they send a response, not sure how to interpet it
+				token = base64url_encode(get_random_bytes(32)).decode('UTF-8')
+				token = re.sub(r'=', '', token)
+				self.get("/ci/authentication", version=2, data={"nonce": token})
+
 				self.get("/ci/info", version=2)  # clothes washer
 				self.get("/iz/info")  # dish washer
 				#self.get("/ci/tzInfo", version=2)
@@ -195,10 +205,18 @@ class HCDevice:
 				values = msg["data"][0]
 				self.load_description(values["vib"])
 
+			elif resource == "/ro/descriptionChange" \
+			or resource == "/ro/allDescriptionChanges":
+				# we asked for these but don't know have to parse yet
+				pass
+
+			elif resource == "/ni/info":
+				# we're already talking, so maybe we don't care?
+				pass
+
 			elif resource == "/ro/allMandatoryValues" \
 			or resource == "/ro/values":
 				values = self.parse_values(msg["data"])
-				#print(now(), values)
 			elif resource == "/ci/registeredDevices":
 				# we don't care
 				pass
@@ -222,8 +240,7 @@ class HCDevice:
 				#self.get("/if/info")
 
 			else:
-				#print(now(), "Unknown reponse", resource)
-				pass
+				print(now(), "Unknown", msg)
 
 		# return whatever we've parsed out of it
 		return values
