@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+# Contact a Bosh-Siemens Home Connect device
+# and connect it to the mqtt server
+import sys
+import json
+import re
+import time
+import io
+from HCSocket import HCSocket, now
+from HCDevice import HCDevice
+import paho.mqtt.client as mqtt
+
+mqtt_prefix = "homeconnect/"
+client = mqtt.Client()
+client.connect("dashboard", 1883, 70)
+
+device_name = 'dishwasher'
+
+if len(sys.argv) > 1:
+	device_name = sys.argv[1]
+
+devices = {
+	'clothes': {
+		"host": '10.1.0.145',
+		"psk64": 'KlRQQyG8AkEfRFPr0v7vultz96zcal5lxj2fAc2ohaY',
+		"iv64": 'tTUvqcsBldtkhHvDwE2DpQ',
+	},
+	'dishwasher': {
+		"host": "10.1.0.133",
+		"psk64": "Dsgf2MZJ-ti85_00M1QT1HP5LgH82CaASYlMGdcuzcs=",
+		"iv64": None, # no iv == https
+	},
+}
+
+device = devices.get(device_name, None)
+
+if not device:
+	print(device_name, " not known", file=sys.stderr)
+	exit(1)
+
+mqtt_topic = mqtt_prefix + device_name
+
+topics = {
+	"OperationState": "state",
+	"DoorState": "door",
+	"RemainingProgramTime": "remaining",
+	"PowerState": "power",
+	"LowWaterPressure": "lowwaterpressure",
+	"AquaStopOccured": "aquastop",
+	"InternalError": "error",
+	"FatalErrorOccured": "error",
+}
+
+state = {}
+for topic in topics:
+	state[topics[topic]] = None
+
+while True:
+	try:
+		ws = HCSocket(device["host"], device["psk64"], device["iv64"])
+		dev = HCDevice(ws)
+
+		#ws.debug = True
+		ws.reconnect()
+
+		while True:
+			msg = dev.recv()
+			if msg is None:
+				break
+			if len(msg) > 0:
+				print(now(), msg)
+
+			update = False
+			for topic in topics:
+				value = msg.get(topic, None)
+				if value is None:
+					continue
+				state[topics[topic]] = value
+				update = True
+
+			if not update:
+				continue
+
+			msg = json.dumps(state)
+			client.publish(mqtt_topic + "/state", msg)
+
+	except Exception as e:
+		print("ERROR", device["host"], e, file=sys.stderr)
+
+	time.sleep(5)
