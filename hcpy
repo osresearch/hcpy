@@ -9,7 +9,7 @@ import io
 from HCSocket import HCSocket, now
 from HCDevice import HCDevice
 
-if False:
+if len(sys.argv) >= 1 and sys.argv[1] == 'clothes':
 	# clothes dryer
 	#  RX:{'service': 'ro', 'version': 1}
 	#  {'service': 'ei', 'version': 2}
@@ -34,13 +34,16 @@ while True:
 		ws = HCSocket(host, psk64, iv64)
 		dev = HCDevice(ws)
 
+		#ws.debug = True
+		ws.reconnect()
+
 		while True:
 			msg = dev.recv()
 			if msg is None:
 				break
 			if len(msg) > 0:
 				print(now(), msg)
-			
+
 	except Exception as e:
 		print("ERROR", host, e, file=sys.stderr)
 

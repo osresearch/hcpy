@@ -51,7 +51,8 @@ class HCSocket:
 			self.port = 443
 			self.uri = "wss://" + host + ":443/homeconnect"
 
-		self.reconnect()
+		# don't connect automatically so that debug etc can be set
+		#self.reconnect()
 
 	# restore the encryption state for a fresh connection
 	# this is only used by the HTTP connection
@@ -164,5 +165,6 @@ class HCSocket:
 		if buf is None:
 			return None
 
-		#print(now(), "RX:", buf)
+		if self.debug:
+			print(now(), "RX:", buf)
 		return buf
