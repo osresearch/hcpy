@@ -2,3 +2,4 @@ pycryptodome
 websocket-client
 sslpsk
 paho.mqtt
+lxml

@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+#from urllib.request import urlopen
+#from urllib.parse import urlencode
+import requests
+from urllib.parse import urlparse, parse_qs
+from lxml import html
+import re
+import sys
+from base64 import b64decode
+
+email = sys.argv[1]
+password = sys.argv[2]
+fields = {}
+
+app_id = '9B75AC9EC512F36C84256AC47D813E2C1DD0D6520DF774B020E1E6E2EB29B1F3'
+base = 'https://api.home-connect.com/security/oauth/'
+loginpage_url = base + 'authorize?response_type=code&prompt=login&code_challenge=abcdef&code_challenge_method=S256&client_id=' + app_id
+auth_url = base + 'login'
+
+r = requests.get(loginpage_url)
+if r.status_code != requests.codes.ok:
+	print("error fetching login url!", file=sys.stderr)
+	exit(1)
+
+loginpage = r.text
+
+#with open("login.html") as fd:
+#	loginpage = fd.read()
+
+tree = html.fromstring(loginpage)
+
+for form in tree.forms:
+	if form.attrib.get("id") != "login_form":
+		continue
+	for field in form.fields:
+		fields[field] = form.fields.get(field)
+
+#print(fields)
+
+# add in the email and password
+fields["email"] = email
+fields["password"] = password
+
+# try to submit the form and get the redirect URL with the token
+r = requests.post(auth_url, data=fields, allow_redirects=False)
+if r.status_code != 302:
+	print("Did not get a redirect; wrong username/password?", file=sys.stderr)
+	exit(1)
+
+# Yes!
+location = r.headers["location"]
+url = urlparse(location)
+query = parse_qs(url.query)
+code = query.get("code")
+if not code:
+	print("Unable to find code in response?", location, file=sys.stderr)
+	sys.exit(1)
+
+# finally we have it...
+print(b64decode(code[0]).decode('UTF-8'))
+
+
+# next step is to use it to construct a bearer token to connect to the websocket
+# and retrieve the devices on the account....
