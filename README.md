@@ -29,8 +29,20 @@ considered a no-cloud local control configuration.  The protocols seem
 sound and should prevent most any random attacker on your network from
 being able to take over your appliances to mine cryptocurrency.
 
+## Configuring devices
 
-## Finding the PSK (and IV)
+The `hc-login` script perfoms the OAuth process to login to your
+Home Connect account and retrieves a list of all the connected devices
+along with the PSK or AES keys and IV, as well as the device descriptions.
+These are stored into a `config.json` file that can be used by `hc2mqtt`
+to contact the devices and relay their state to your MQTT server.
+
+```
+hc-login username password > config.json
+hc2mqtt config.json
+```
+
+## Finding the PSK and IV (no longer necessary)
 
 ![application setup screen](images/network-setup.jpg)
 
