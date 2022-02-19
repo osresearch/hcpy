@@ -6,6 +6,7 @@
 import requests
 from urllib.parse import urlparse, parse_qs, urlencode
 from lxml import html
+import io
 import re
 import sys
 import json
@@ -14,11 +15,13 @@ from base64 import b64decode as base64_decode
 from base64 import urlsafe_b64encode as base64url_encode
 from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA256
+from zipfile import ZipFile
 
 email = sys.argv[1]
 password = sys.argv[2]
 
-base = 'https://api.home-connect.com/security/oauth/'
+base_url = 'https://api.home-connect.com/security/oauth/'
+asset_url = 'https://prod.reu.rest.homeconnectegw.com/'
 
 # The app_id and scope are hardcoded in the application
 app_id = '9B75AC9EC512F36C84256AC47D813E2C1DD0D6520DF774B020E1E6E2EB29B1F3'
@@ -43,9 +46,9 @@ login_query = {
 	"redirect_uri": 'hcauth://auth/prod',
 }
 
-loginpage_url = base + 'authorize?' + urlencode(login_query)
-auth_url = base + 'login'
-token_url = base + 'token'
+loginpage_url = base_url + 'authorize?' + urlencode(login_query)
+auth_url = base_url + 'login'
+token_url = base_url + 'token'
 
 r = requests.get(loginpage_url)
 if r.status_code != requests.codes.ok:
@@ -115,4 +118,56 @@ if r.status_code != requests.codes.ok:
 #print('--------- got token page ----------')
 
 # Yes!
-print(r.text)
+#print(r.text)
+
+token = json.loads(r.text)["access_token"]
+headers = {
+	"Authorization": "Bearer " + token,
+}
+
+# now we can fetch the rest of the account info
+r = requests.get(asset_url + "account/details", headers=headers)
+if r.status_code != requests.codes.ok:
+	print("unable to fetch account details", file=sys.stderr)
+	print(r.headers, r.text)
+	exit(1)
+
+#print(r.text)
+account = json.loads(r.text)
+configs = []
+
+for app in account["data"]["homeAppliances"]:
+	app_brand = app["brand"]
+	app_type = app["type"]
+	app_id = app["identifier"]
+
+	config = {
+		"name": app_type.lower(),
+	}
+
+	configs.append(config)
+
+	if "tls" in app:
+		# fancy machine with TLS support
+		config["host"] =app_brand + "-" + app_type + "-" + app_id
+		config["key"] = app["tls"]["key"]
+	else:
+		# less fancy machine with HTTP support
+		config["host"] = app_id
+		config["key"] = app["aes"]["key"]
+		config["iv"] = app["aes"]["iv"]
+
+	# Fetch the XML zip file for this device
+	app_url = asset_url + "api/iddf/v1/iddf/" + app_id
+	print("fetching", app_url)
+	r = requests.get(app_url, headers=headers)
+	if r.status_code != requests.codes.ok:
+		print(app_id, ": unable to fetch machine description?")
+		next
+
+	# we now have a zip file with XML, let's unpack them
+	z = ZipFile(io.BytesIO(r.content))
+	print(z.infolist())
+
+
+print(configs)
