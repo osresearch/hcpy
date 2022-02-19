@@ -6,3 +6,7 @@ __*
 *.key
 *.ws
 *.enc
+*.txt
+*.json
+*.zip
+*.sh
