@@ -54,26 +54,17 @@ def now():
 	return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
 
 class HCDevice:
-	def __init__(self, ws):
+	def __init__(self, ws, features):
 		self.ws = ws
-		self.machine = None
+		self.features = features
 		self.session_id = None
 		self.tx_msg_id = None
 		self.device_name = "hcpy"
 		self.device_id = "0badcafe"
 		self.debug = False
 
-	def load_description(self, device_type):
-		json_file = "xml/" + device_type + ".json"
-		try:
-			with io.open(json_file, "r") as fp:
-				self.machine = json.load(fp)
-			print(now(), json_file + ": parsed machine description")
-		except Exception as e:
-			print(now(), json_file + ": unable to load machine description", e)
-
 	def parse_values(self, values):
-		if not self.machine:
+		if not self.features:
 			return values
 
 		result = {}
@@ -86,8 +77,8 @@ class HCDevice:
 			name = uid
 			status = None
 
-			if uid in self.machine["features"]:
-				status = self.machine["features"][uid]
+			if uid in self.features:
+				status = self.features[uid]
 
 			if status:
 				name = status["name"]
@@ -199,11 +190,8 @@ class HCDevice:
 
 		elif action == "RESPONSE" or action == "NOTIFY":
 			if resource == "/iz/info" or resource == "/ci/info":
-				# see if we have a device file for this model
-				if not "data" in msg:
-					return values
-				values = msg["data"][0]
-				self.load_description(values["vib"])
+				# we could validate that this matches our machine
+				pass
 
 			elif resource == "/ro/descriptionChange" \
 			or resource == "/ro/allDescriptionChanges":

@@ -16,6 +16,7 @@ from base64 import urlsafe_b64encode as base64url_encode
 from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA256
 from zipfile import ZipFile
+from HCxml2json import xml2json
 
 email = sys.argv[1]
 password = sys.argv[2]
@@ -121,6 +122,7 @@ if r.status_code != requests.codes.ok:
 #print(r.text)
 
 token = json.loads(r.text)["access_token"]
+print("Received access token", file=sys.stderr)
 headers = {
 	"Authorization": "Bearer " + token,
 }
@@ -159,7 +161,7 @@ for app in account["data"]["homeAppliances"]:
 
 	# Fetch the XML zip file for this device
 	app_url = asset_url + "api/iddf/v1/iddf/" + app_id
-	print("fetching", app_url)
+	print("fetching", app_url, file=sys.stderr)
 	r = requests.get(app_url, headers=headers)
 	if r.status_code != requests.codes.ok:
 		print(app_id, ": unable to fetch machine description?")
@@ -167,7 +169,12 @@ for app in account["data"]["homeAppliances"]:
 
 	# we now have a zip file with XML, let's unpack them
 	z = ZipFile(io.BytesIO(r.content))
-	print(z.infolist())
+	#print(z.infolist())
+	features = z.open(app_id + "_FeatureMapping.xml").read()
+	description = z.open(app_id + "_DeviceDescription.xml").read()
 
+	machine = xml2json(features, description)
+	config["description"] = machine["description"]
+	config["features"] = machine["features"]
 
-print(configs)
+print(json.dumps(configs, indent=4))

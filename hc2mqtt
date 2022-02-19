@@ -11,22 +11,18 @@ from HCSocket import HCSocket, now
 from HCDevice import HCDevice
 import paho.mqtt.client as mqtt
 
+if len(sys.argv) < 2:
+	print("Usage: hc2mqtt config.json", file=sys.stderr)
+	exit(1)
+with open(sys.argv[1], "r") as f:
+	config_json = f.read()
+devices = json.loads(config_json)
+
+# these should probably be in the config too
 mqtt_prefix = "homeconnect/"
 client = mqtt.Client()
 client.connect("dashboard", 1883, 70)
 
-devices = {
-	'clothes': {
-		"host": '10.1.0.145',
-		"psk64": 'KlRQQyG8AkEfRFPr0v7vultz96zcal5lxj2fAc2ohaY',
-		"iv64": 'tTUvqcsBldtkhHvDwE2DpQ',
-	},
-	'dishwasher': {
-		"host": "10.1.0.133",
-		"psk64": "Dsgf2MZJ-ti85_00M1QT1HP5LgH82CaASYlMGdcuzcs=",
-		"iv64": None, # no iv == https
-	},
-}
 
 # Map their value names to easier state names
 topics = {
@@ -42,8 +38,8 @@ topics = {
 
 
 
-def client_connect(device_name, device):
-	mqtt_topic = mqtt_prefix + device_name
+def client_connect(device):
+	mqtt_topic = mqtt_prefix + device["name"]
 	host = device["host"]
 
 	state = {}
@@ -52,8 +48,8 @@ def client_connect(device_name, device):
 
 	while True:
 		try:
-			ws = HCSocket(host, device["psk64"], device["iv64"])
-			dev = HCDevice(ws)
+			ws = HCSocket(host, device["key"], device.get("iv",None))
+			dev = HCDevice(ws, device.get("features", None))
 
 			#ws.debug = True
 			ws.reconnect()
@@ -98,6 +94,6 @@ def client_connect(device_name, device):
 		time.sleep(5)
 
 for device in devices:
-	thread = Thread(target=client_connect, args=(device, devices[device]))
+	thread = Thread(target=client_connect, args=(device,))
 	thread.start()
 
