@@ -3,8 +3,8 @@
 # Interface with Home Connect appliances in Python
 
 This is a very, very beta interface for Bosch-Siemens Home Connect
-devices through their local network connection.  Unlike the usual
-reputation of IoT devices for very bad security, BSG seem to have
+devices through their local network connection.  Unlike most
+IoT devices that have a reputation for very bad security, BSG seem to have
 done a decent job of designing their system, especially since
 they allow a no-cloud local control configuration.  The protocols
 seem sound, use well tested cryptographic libraries (TLS PSK with
@@ -25,6 +25,8 @@ and we might need to revisit it later.
 
 
 ## Authenticate to the cloud servers
+
+![laptop in a clothes washer with a display DoorState:Closed](images/doorclose.jpg)
 
 ```
 hc-login $USERNAME $PASSWORD > config.json
@@ -84,6 +86,7 @@ Example message published to `homeconnect/dishwasher`:
 
 <details>
 <summary>Full state information</summary>
+
 ```
 {
 	'AllowBackendConnection': False,
@@ -179,6 +182,7 @@ Example message published to `homeconnect/washer`:
 
 <details>
 <summary>Full state information</summary>
+
 ```
 {
 	'BackendConnected': False,
@@ -246,7 +250,108 @@ Example message published to `homeconnect/washer`:
 
 ### Coffee Machine
 
-To be written.
+![Image of the coffee machine from the Siemens website](images/coffee.jpg)
+
+The coffee machine needs a better mapping to MQTT messages.
+
+<details>
+<summary>Full state information</summary>
+
+```
+{
+	'LastSelectedBeverage': 8217,
+	'LocalControlActive': False,
+	'PowerSupplyError': 'Off',
+	'DripTrayNotInserted': 'Off',
+	'DripTrayFull': 'Off',
+	'WaterFilterShouldBeChanged': 'Off',
+	'WaterTankEmpty': 'Off',
+	'WaterTankNearlyEmpty': 'Off',
+	'BrewingUnitIsMissing': 'Off',
+	'SelectedProgram': 0,
+	'MacchiatoPause': '5Sec',
+	'ActiveProgram': 0,
+	'BeverageCountdownWaterfilter': 48,
+	'BeverageCountdownCalcNClean': 153,
+	'RemoteControlStartAllowed': True,
+	'EmptyDripTray': 'Off',
+	'BeverageCountdownDescaling': 153,
+	'EmptyDripTrayRemoveContainer': 'Off',
+	'BeverageCounterRistrettoEspresso': 177,
+	'AllowBackendConnection': True,
+	'BeverageCounterHotWater': 37351,
+	'RemindForMilkAfter': 'Off',
+	'BeverageCounterFrothyMilk': 22,
+	'BeverageCounterCoffeeAndMilk': 1077,
+	'CustomerServiceRequest': 'Off',
+	'4645': 0,
+	'CoffeeMilkOrder': 'FirstCoffee',
+	'BackendConnected': True,
+	'BeverageCounterCoffee': 21,
+	'Enjoy': 'Off',
+	'UserMode': 'Barista',
+	'PlaceEmptyGlassUnderOutlet': 'Off',
+	'WaterTankNotInserted': 'Off',
+	'PlaylistRunning': False,
+	'BeverageCounterPowderCoffee': 9,
+	'DemoModeActive': False,
+	'CleanBrewingUnit': 'Off',
+	'WaterHardness': 'Medium',
+	'CloseDoor': 'Off',
+	'EmptyMilkTank': 'Off',
+	'SpecialRinsing': 'Off',
+	'AllowConsumerInsights': False,
+	'SwitchOffAfter': '01Hours15Minutes',
+	'4681': 0,
+	'LastSelectedCoffeeWorldBeverage': 20514,
+	'BrightnessDisplay': 7,
+	'CleanMilkTank': 'Off',
+	'NotEnoughWaterForThisKindOfBeverage': 'Off',
+	'ChildLock': False,
+	'4666': 0,
+	'Language': 'De',
+	'MilkContainerConnected': 'Off',
+	'SoftwareUpdateAvailable': 'Off',
+	'LeaveProfilesAutomatically': True,
+	'RemoveWaterFilter': 'Off',
+	'OperationState': 'Inactive',
+	'BeverageCounterHotMilk': 9,
+	'4362': 0,
+	'MilkTubeRemoved': 'Off',
+	'DeviceIsToCold4C': 'Off',
+	'SystemHasRunDry': 'Off',
+	'DeviceShouldBeDescaled': 'Off',
+	'PowerState': 'Standby',
+	'DeviceShouldBeCleaned': 'Off',
+	'DeviceShouldBeCalcNCleaned': 'Off',
+	'BeanContainerEmpty': 'Off',
+	'MilkStillOK': 'Off',
+	'CoffeeOutletMissing': 'Off',
+	'MilkReminder': 'Off',
+	'RefillEmptyWaterTank': 'Off',
+	'RefillEmptyBeanContainer': 'Off',
+	'UnderOverVoltage': 'Off',
+	'NotEnoughPomaceCapacityForThisKindOfBeverage': 'Off',
+	'AdjustGrindSetting': 'Off',
+	'InsertWaterFilter': 'Off',
+	'FillDescaler': 'Off',
+	'CleanFillWaterTank': 'Off',
+	'PlaceContainerUnderOutlet': 'Off',
+	'SwitchOffPower30sekBackOn': 'Off',
+	'ThrowCleaningDiscInTheDrawer': 'Off',
+	'RemoveMilkContainer': 'Off',
+	'RemoveContainerUnderOutlet': 'Off',
+	'MilkContainerRemoved': 'Off',
+	'ServiceProgramFinished': 'Off',
+	'DeviceDescalingOverdue': 'Off',
+	'DeviceDescalingBlockage': 'Off',
+	'CustomerServiceConnectionAllowed': False,
+	'BeverageCountdownCleaning': 38,
+	'ProcessPhase': 'None'
+}
+```
+</details>
+
 
 ## FRIDA tools
 
