@@ -1,163 +1,253 @@
-![dishwasher installed in a kitchen](images/dishwasher.jpg)
+![dishwasher installed in a kitchen](images/kitchen.jpg)
 
 # Interface with Home Connect appliances in Python
 
 This is a very, very beta interface for Bosch-Siemens Home Connect
-devices through their local network connection.  It has some tools
-to find the TLS PSK (Pre-shared Key) that is used to allow local
-access, and a Python script that can construct the proper Websocket
-interface to subscribe to events.
+devices through their local network connection.  Unlike the usual
+reputation of IoT devices for very bad security, BSG seem to have
+done a decent job of designing their system, especially since
+they allow a no-cloud local control configuration.  The protocols
+seem sound, use well tested cryptographic libraries (TLS PSK with
+modern ciphres) or well understood primitives (AES-CBC with HMAC),
+and should prevent most any random attacker on your network from being able to
+[take over your appliances to mine cryptocurrency](http://www.antipope.org/charlie/blog-static/2013/12/trust-me.html).
 
-*WARNING: This is not ready for prime time!*
+*WARNING: This tool not ready for prime time and is still beta!*
 
-The dishwasher has a local HTTPS port open.  Attempting to connect to
-the HTTPS port with `curl` results in a cryptic protocol error
-due to the non-standard cipher selection, `ECDHE-PSK-CHACHA20-POLY1305`.
-PSK also requires that both sides agree on a symetric key,
-so it is necessary to figure out what that key is before any
-further progress can be made.
-
-The clothes washer has a local HTTP port that also responds to websocket
-traffic, although the contents of the frames are AES-CBC encrypted with a key
-derived from the PSK and authenticated with SHA256-HMAC using another
-key derived from the PSK.  It is also necessary to find the IV for the AES
-encryption to communicate with the washer.
-
-Despite the usual reputation for bad IoT security, Bosch-Siemens seem to
-have done a decent job of designing their system, especially since they
-considered a no-cloud local control configuration.  The protocols seem
-sound and should prevent most any random attacker on your network from
-being able to take over your appliances to mine cryptocurrency.
-
-## Configuring devices
-
-The `hc-login` script perfoms the OAuth process to login to your
-Home Connect account and retrieves a list of all the connected devices
-along with the PSK or AES keys and IV, as well as the device descriptions.
-These are stored into a `config.json` file that can be used by `hc2mqtt`
-to contact the devices and relay their state to your MQTT server.
+## Setup
 
 ```
-hc-login username password > config.json
+pip3 -r requirements.txt
+```
+
+Install the Python dependencies; the `sslpsk` one is a little weird
+and we might need to revisit it later.
+
+
+## Authenticate to the cloud servers
+
+```
+hc-login $USERNAME $PASSWORD > config.json
+```
+
+The `hc-login` script perfoms the OAuth process to login to your
+Home Connect account with your usename and password.  It
+receives a bearer token that can then be used to retrieves
+a list of all the connected devices, their authentication
+and encryption keys, and XML files that describe all of the
+features and options.
+
+This only needs to be done once or when you add new devices;
+the resulting configuration JSON file *should* be sufficient to
+connect to the devices on your local network, assuming that
+your mDNS or DNS server resolves the names correctly.
+
+
+## Home Connect to MQTT
+
+```
 hc2mqtt config.json
 ```
 
-## Finding the PSK and IV (no longer necessary)
+This tool will establish websockets to the local devices and
+transform their messages into MQTT JSON messages.  The exact
+format is likely to change; it is currently a thin translation
+layer over the XML retrieved from cloud servers during the
+initial configuration.
 
-![application setup screen](images/network-setup.jpg)
+### Dishwasher
 
-You will need to set the dishwasher to "`Local network only`"
-in the setup application so that your phone will connect
-directly to it, rather than going through the cloud services.
+![laptop in a dishwasher](images/dishwasher.jpg)
 
-You'll also need a rooted Android phone running `frida-server`
-and the `find-psk.frida` script.  This will hook the callback
-from the OpenSSL library `hcp::client_psk_callback` that is called
-when OpenSSL has made a connection and now needs to establish
-the PSK.
+The dishwasher has a local HTTPS port open, although attempting to connect to
+the HTTPS port with `curl` results in a cryptic protocol error
+due to the non-standard cipher selection, `ECDHE-PSK-CHACHA20-POLY1305`.
+PSK also requires that both sides agree on a symetric key,
+so a special hacked version of `sslpsk` is used to establish the
+connection and then hand control to the Python `websock-client`
+library.
 
-```
-frida --no-pause -f com.bshg.homeconnect.android.release -U -l find-psk.frida
-```
-
-It should start the Home Connect application and eventually
-print a message like:
-
-```
-psk callback hint 'HCCOM_Local_App'
-psk 32 0x6ee63fb2f0
-           0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
-00000000  0e c8 1f d8 c6 49 fa d8 bc e7 fd 34 33 54 13 d4  .....I.....43T..
-00000010  73 f9 2e 01 fc d8 26 80 49 89 4c 19 d7 2e cd cb  s.....&.I.L.....
-```
-
-Which gives you the 32-byte PSK value to copy into the `hcpy` program.
-
-## SSL logging
-
-The Frida script will also dump all of the SSL traffic so that you can
-see different endpoints and things.  Not much is documented yet.
-
-Note that the TX from the phone on the websocket is "masked" with an
-repeating 4-byte XOR that is sent in the first part of each messages.
-The script could be augmented to decode those as well.
-The replies from the device are not masked so they can be read in the clear.
-
-## Retrieving home appliance configuration
+Example message published to `homeconnect/dishwasher`:
 
 ```
-frida-trace -o initHomeAppliance.log -f "com.bshg.homeconnect.android.release" -U -j '*!initHomeAppliance''
+{
+	"state":	"Run",
+	"door":		"Closed",
+	"remaining":	"2:49",
+	"power":	true,
+	"lowwaterpressure": false,
+	"aquastop":	false,
+	"error":	false,
+	"remainingseconds": 10140
+}
 ```
 
-PSK can also be found in the last section of the config as base64url encoded.
+<details>
+<summary>Full state information</summary>
+```
+{
+	'AllowBackendConnection': False,
+	'BackendConnected': False,
+	'RemoteControlLevel': 'ManualRemoteStart',
+	'SoftwareUpdateAvailable': 'Off',
+	'ConfirmPermanentRemoteStart': 'Off',
+	'ActiveProgram': 0,
+	'SelectedProgram': 8192,
+	'RemoteControlStartAllowed': False,
+	'520': '2022-02-21T16:48:54',
+	'RemoteControlActive': True,
+	'AquaStopOccured': 'Off',
+	'DoorState': 'Open',
+	'PowerState': 'Off',
+	'ProgramFinished': 'Off',
+	'ProgramProgress': 100,
+	'LowWaterPressure': 'Off',
+	'RemainingProgramTime': 0,
+	'ProgramAborted': 'Off',
+	'547': False,
+	'RemainingProgramTimeIsEstimated': True,
+	'OperationState': 'Inactive',
+	'StartInRelative': 0,
+	'EnergyForecast': 82,
+	'WaterForecast': 70,
+	'ConnectLocalWiFi': 'Off',
+	'SoftwareUpdateTransactionID': 0,
+	'SoftwareDownloadAvailable': 'Off',
+	'SoftwareUpdateSuccessful': 'Off',
+	'ProgramPhase': 'Drying',
+	'SilenceOnDemandRemainingTime': 0,
+	'EcoDryActive': False,
+	'RinseAid': 'R04',
+	'SensitivityTurbidity': 'Standard',
+	'ExtraDry': False,
+	'HotWater': 'ColdWater',
+	'TimeLight': 'On',
+	'EcoAsDefault': 'LastProgram',
+	'SoundLevelSignal': 'Off',
+	'SoundLevelKey': 'Medium',
+	'WaterHardness': 'H04',
+	'DryingAssistantAllPrograms': 'AllPrograms',
+	'SilenceOnDemandDefaultTime': 1800,
+	'SpeedOnDemand': False,
+	'InternalError': 'Off',
+	'CheckFilterSystem': 'Off',
+	'DrainingNotPossible': 'Off',
+	'DrainPumpBlocked': 'Off',
+	'WaterheaterCalcified': 'Off',
+	'LowVoltage': 'Off',
+	'SaltLack': 'Off',
+	'RinseAidLack': 'Off',
+	'SaltNearlyEmpty': 'Off',
+	'RinseAidNearlyEmpty': 'Off',
+	'MachineCareReminder': 'Off',
+	'5121': False,
+	'HalfLoad': False,
+	'IntensivZone': False,
+	'VarioSpeedPlus': False,
+	'5131': False,
+	'5134': True,
+	'SilenceOnDemand': False
+}
+```
+</details>
+
+
+### Clothes washer
+
+![laptop in a clothes washer](images/clotheswasher.jpg)
+
+The clothes washer has a local HTTP port that also responds to websocket
+traffic, although the contents of the frames are AES-CBC encrypted with a key
+derived from `HMAC(PSK,"ENC")` and authenticated with SHA256-HMAC using another
+key derived from `HMAC(PSK,"MAC")`.  The encrypted messages are send as
+binary data over the websocket (type 0x82).
+
+Example message published to `homeconnect/washer`:
 
 ```
-echo 'Dsgf2MZJ-ti85_00M1QT1HP5LgH82CaASYlMGdcuzcs"' | tr '_\-"' '/+=' | base64 -d | xxd -g1
+{
+	"state": "Ready",
+	"door": "Closed",
+	"remaining": "3:48",
+	"power": true,
+	"lowwaterpressure": false,
+	"aquastop": false,
+	"error": false,
+	"remainingseconds": 13680
+}
 ```
 
-The IV is also there for devices that use it.  This needs better documentation.
-
-TODO: document the other frida scripts that do `sendmsg()` and `Encrypt()` / `Decrypt()` tracing
-
-
-
-## hcpy
-
-![laptop in a dishwasher](images/laptop.jpg)
-
-The `hcpy` tool can contact your device, and if the PSK is correct, it will
-register for notification of events.
-
+<details>
+<summary>Full state information</summary>
 ```
-RX: {'sID': 2354590730, 'msgID': 3734589701, 'resource': '/ei/initialValues', 'version': 2, 'action': 'POST', 'data': [{'edMsgID': 3182729968}]}
-TX: {"sID":2354590730,"msgID":3734589701,"resource":"/ei/initialValues","version":2,"action":"RESPONSE","data":[{"deviceType":"Application","deviceName":"py-hca","deviceID":"1234"}]}
-TX: {"sID":2354590730,"msgID":3182729968,"resource":"/ci/services","version":1,"action":"GET"}
-TX: {"sID":2354590730,"msgID":3182729969,"resource":"/iz/info","version":1,"action":"GET"}
-TX: {"sID":2354590730,"msgID":3182729970,"resource":"/ei/deviceReady","version":2,"action":"NOTIFY"}
-RX: {'sID': 2354590730, 'msgID': 3182729968, 'resource': '/ci/services', 'version': 1, 'action': 'RESPONSE', 'data': [{'service': 'ci', 'version': 3}, {'service': 'ei', 'version': 2}, {'service': 'iz', 'version': 1}, {'service': 'ni', 'version': 1}, {'service': 'ro', 'version': 1}]}
-RX: {'sID': 2354590730, 'msgID': 3182729969, 'resource': '/iz/info', 'version': 1, 'action': 'RESPONSE', 'data': [{'deviceID': '....', 'eNumber': 'SX65EX56CN/11', 'brand': 'SIEMENS', 'vib': 'SX65EX56CN', 'mac': '....', 'haVersion': '1.4', 'swVersion': '3.2.10.20200911163726', 'hwVersion': '2.0.0.2', 'deviceType': 'Dishwasher', 'deviceInfo': '', 'customerIndex': '11', 'serialNumber': '....', 'fdString': '0201', 'shipSki': '....'}]}
+{
+	'BackendConnected': False,
+	'CustomerEnergyManagerPaired': False,
+	'CustomerServiceConnectionAllowed': False,
+	'DoorState': 'Open',
+	'FlexStart': 'Disabled',
+	'LocalControlActive': False,
+	'OperationState': 'Ready',
+	'RemoteControlActive': True,
+	'RemoteControlStartAllowed': False,
+	'WiFiSignalStrength': -50,
+	'LoadInformation': 0,
+	'AquaStopOccured': 'Off',
+	'CustomerServiceRequest': 'Off',
+	'LowWaterPressure': 'Off',
+	'ProgramFinished': 'Off',
+	'SoftwareUpdateAvailable': 'Off',
+	'WaterLevelTooHigh': 'Off',
+	'DoorNotLockable': 'Off',
+	'DoorNotUnlockable': 'Off',
+	'DoorOpen': 'Off',
+	'FatalErrorOccured': 'Off',
+	'FoamDetection': 'Off',
+	'DrumCleanReminder': 'Off',
+	'PumpError': 'Off',
+	'ReleaseRinseHoldPending': 'Off',
+	'EnergyForecast': 20,
+	'EstimatedTotalProgramTime': 13680,
+	'FinishInRelative': 13680,
+	'FlexFinishInRelative': 0,
+	'ProgramProgress': 0,
+	'RemainingProgramTime': 13680,
+	'RemainingProgramTimeIsEstimated': True,
+	'WaterForecast': 40,
+	'LoadRecommendation': 10000,
+	'ProcessPhase': 4,
+	'ReferToProgram': 0,
+	'LessIroning': False,
+	'Prewash': False,
+	'RinseHold': False,
+	'RinsePlus': 0,
+	'SilentWash': False,
+	'Soak': False,
+	'SpeedPerfect': False,
+	'SpinSpeed': 160,
+	'Stains': 0,
+	'Temperature': 254,
+	'WaterPlus': False,
+	'AllowBackendConnection': False,
+	'AllowEnergyManagement': False,
+	'AllowFlexStart': False,
+	'ChildLock': False,
+	'Language': 'En',
+	'PowerState': 'On',
+	'EndSignalVolume': 'Medium',
+	'KeySignalVolume': 'Loud',
+	'EnableDrumCleanReminder': True,
+	'ActiveProgram': 0,
+	'SelectedProgram': 28718
+}
 ```
-
-## Feature UID mapping
-
-There are other things that can be hooked in the application
-to get the mappings of the `uid` to actual menu settings and
-XML files of the configuration parameters.
-
-In the `xml/` directory are some of the device descriptions
-and feature maps that the app downloads from the Home Connect
-servers.  Note that the XML has unadorned hex, while the
-websocket messages are in decimal.
-
-For instance, when the dishwasher door is closed and then
-re-opened, it sends the messages for `'uid':512`, which is 0x020F hex:
-
-```
-RX: {... 'data': [{'uid': 527, 'value': 1}]}
-RX: {... 'data': [{'uid': 527, 'value': 0}]}
-```
-
-In the `xml/dishwasher-description.xml` there is a `statusList`
-that says uid 0x020f is a readonly value that uses enum 0x0201:
-
-```
-    <status access="read" available="true" enumerationType="0201" refCID="03" refDID="80" uid="020F"/>
-```
-
-In the `xml/dishwasher-featuremap.xml` there is a mapping of feature
-reference UIDs to names:
-
-```
-    <feature refUID="020F">BSH.Common.Status.DoorState</feature>
-```
-
-as well as mappings of enum ids to enum names and values:
-
-```
-    <enumDescription enumKey="BSH.Common.EnumType.DoorState" refENID="0201">
-      <enumMember refValue="0">Open</enumMember>
-      <enumMember refValue="1">Closed</enumMember>
-    </enumDescription>
-```
+</details>
 
 
+### Coffee Machine
+
+To be written.
+
+## FRIDA tools
+
+Moved to [`README-frida.md`](README-frida.md)
