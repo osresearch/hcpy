@@ -45,6 +45,7 @@ login_query = {
 	"nonce": b64random(16),
 	"state": b64random(16),
 	"redirect_uri": 'hcauth://auth/prod',
+	"redirect_target": 'icore',
 }
 
 loginpage_url = base_url + 'authorize?' + urlencode(login_query)
@@ -53,7 +54,7 @@ token_url = base_url + 'token'
 
 r = requests.get(loginpage_url)
 if r.status_code != requests.codes.ok:
-	print("error fetching login url!", file=sys.stderr)
+	print("error fetching login url!", login_url, file=sys.stderr)
 	exit(1)
 loginpage = r.text
 
@@ -86,6 +87,7 @@ for form in tree.forms:
 r = requests.post(auth_url, data=auth_fields, allow_redirects=False)
 if r.status_code != 302:
 	print("Did not get a redirect; wrong username/password?", file=sys.stderr)
+	print(r.text)
 	exit(1)
 
 # Yes!
