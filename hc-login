@@ -17,9 +17,11 @@ from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA256
 from zipfile import ZipFile
 from HCxml2json import xml2json
+import click
 
-email = sys.argv[1]
-password = sys.argv[2]
+
+email = click.prompt("Username")
+password = click.prompt("Password", hide_input=True)
 
 base_url = 'https://api.home-connect.com/security/oauth/'
 asset_url = 'https://prod.reu.rest.homeconnectegw.com/'
