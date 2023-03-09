@@ -1,27 +1,19 @@
 #!/usr/bin/env python3
-# This directly follows the OAuth login flow that is opaquely described
-# https://github.com/openid/AppAuth-Android
-# A really nice walk through of how it works is:
-# https://auth0.com/docs/get-started/authentication-and-authorization-flow/call-your-api-using-the-authorization-code-flow-with-pkce
+
 import requests
 from urllib.parse import urlparse, parse_qs, urlencode
-from lxml import html
 import io
 import re
 import sys
 import json
-from time import time
-from base64 import b64decode as base64_decode
 from base64 import urlsafe_b64encode as base64url_encode
 from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA256
 from zipfile import ZipFile
 from HCxml2json import xml2json
-import click
-
-
-email = click.prompt("Username")
-password = click.prompt("Password", hide_input=True)
+import socket
+import subprocess
+import os
 
 base_url = 'https://api.home-connect.com/security/oauth/'
 asset_url = 'https://prod.reu.rest.homeconnectegw.com/'
@@ -54,46 +46,20 @@ loginpage_url = base_url + 'authorize?' + urlencode(login_query)
 auth_url = base_url + 'login'
 token_url = base_url + 'token'
 
-r = requests.get(loginpage_url)
-if r.status_code != requests.codes.ok:
-	print("error fetching login url!", login_url, file=sys.stderr)
-	exit(1)
-loginpage = r.text
+# open the login page in your browser
+subprocess.call(["xdg-open", loginpage_url])
 
-#print('--------- got login page ----------')
+server = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+try:
+	server.bind("/tmp/hcauth.sock")
+	print("Waiting for URL handler", file=sys.stderr)
+	location = server.recv(1024).decode()
+	print("URL received, you can close the browser tab now.", file=sys.stderr)
+	print(location, file=sys.stderr)
+finally:
+	server.close()
+	os.unlink("/tmp/hcauth.sock")
 
-#with open("login.html") as fd:
-#	loginpage = fd.read()
-
-tree = html.fromstring(loginpage)
-
-# add in the email and password
-auth_fields = {
-	"email": email,
-	"password": password,
-	"code_challenge": login_query["code_challenge"],
-	"code_challenge_method": login_query["code_challenge_method"],
-	"redirect_uri": login_query["redirect_uri"],
-}
-
-for form in tree.forms:
-	if form.attrib.get("id") != "login_form":
-		continue
-	for field in form.fields:
-		if field not in auth_fields:
-			auth_fields[field] = form.fields.get(field)
-
-#print(auth_fields)
-
-# try to submit the form and get the redirect URL with the token
-r = requests.post(auth_url, data=auth_fields, allow_redirects=False)
-if r.status_code != 302:
-	print("Did not get a redirect; wrong username/password?", file=sys.stderr)
-	print(r.text)
-	exit(1)
-
-# Yes!
-location = r.headers["location"]
 url = urlparse(location)
 query = parse_qs(url.query)
 #print("response:", location, query)

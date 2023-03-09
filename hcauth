@@ -1,0 +1,18 @@
+#!/usr/bin/python
+
+"""
+The purpose of this script is to work with hcauth.desktop which sets up the hcauth:// protocol handler,
+and forward the URL to the hc-login script.
+
+Copy/link hcauth.desktop in ~/.local/share/applications/
+Copy/link hcauth into your path (i.e. ~/.local/bin/)
+
+You also may need to run `xdg-settings set default-url-scheme-handler hcauth hcauth.desktop` to configure this tool as the default handler.
+"""
+
+import sys
+import socket
+
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+sock.sendto(sys.argv[1].encode(), "/tmp/hcauth.sock")
