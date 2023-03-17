@@ -3,3 +3,4 @@ websocket-client
 sslpsk
 paho.mqtt
 lxml
+click
