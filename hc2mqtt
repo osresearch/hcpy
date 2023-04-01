@@ -31,6 +31,7 @@ def hc2mqtt(config_file: str, mqtt_host: str, mqtt_prefix: str):
 		thread = Thread(target=client_connect, args=(client, device, mqtt_topic))
 		thread.start()
 
+	client.loop_forever()
 
 
 # Map their value names to easier state names
