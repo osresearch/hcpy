@@ -23,6 +23,17 @@ pip3 -r requirements.txt
 Install the Python dependencies; the `sslpsk` one is a little weird
 and we might need to revisit it later.
 
+### For Mac Users
+To avoid running into issues later with your default python installs, it's recommended to use a py virtual env for doing this. Go to your desired test directory, and:
+1. python3 -m venv venv
+1. source venv/bin/activate
+1. clone this repo
+
+Installing `sslpsk` needs some extra steps:
+
+1. The openssl package installed via brew: `brew install openssl`, and
+1. Install `saslpsk` separately with flags: `LDFLAGS="-L$(brew --prefix openssl)/lib" CFLAGS="-I$(brew --prefix openssl)/include" pip3 install sslpsk`
+1. Rest of the requirements should be fine with `pip3 install -r requirements.txt`
 
 ## Authenticate to the cloud servers
 
