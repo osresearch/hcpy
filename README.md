@@ -352,6 +352,50 @@ The coffee machine needs a better mapping to MQTT messages.
 ```
 </details>
 
+## Posting to the appliance
+
+Whereas the reading of de status is very beta, this is very very alpha. There is some basic error handling, but don't expect that everything will work.
+
+In your config file you can find items that contain `readWrite` or `writeOnly`, some of them contain values so you know what to provide, ie:
+
+```json
+"539": {
+	"name": "BSH.Common.Setting.PowerState",
+	"access": "readWrite",
+	"available": "true",
+	"refCID": "03",
+	"refDID": "80",
+	"values": {
+		"2": "On",
+		"3": "Standby"
+	}
+},
+```
+
+With this information you can build the JSON object you can send over mqtt to change the power state
+
+Topic: `homeconnect/[devicename]/set`, ie `homeconnect/coffeemaker/set`
+
+Payload:
+
+```json
+{"uid":539,"value":2}
+```
+As for now, the results will be displayed by the script only, there is no response to an mqtt topic.
+
+There are properties that do not require predefined values, debugging is required to see what is needed. Here are some of those values found through debugging:
+
+Set the time:
+
+```json
+{"uid":520,"value":"2023-07-07T15:01:21"}
+```
+
+Synchronize with time server, `false` is disabled
+
+```json
+{"uid":547,"value":false}
+```
 
 ## FRIDA tools
 

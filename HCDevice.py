@@ -54,7 +54,7 @@ def now():
 	return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
 
 class HCDevice:
-	def __init__(self, ws, features):
+	def __init__(self, ws, features, name):
 		self.ws = ws
 		self.features = features
 		self.session_id = None
@@ -62,13 +62,14 @@ class HCDevice:
 		self.device_name = "hcpy"
 		self.device_id = "0badcafe"
 		self.debug = False
+		self.name = name
 
 	def parse_values(self, values):
 		if not self.features:
 			return values
 
 		result = {}
-		
+
 		for msg in values:
 			uid = str(msg["uid"])
 			value = msg["value"]
@@ -92,19 +93,62 @@ class HCDevice:
 
 		return result
 
+	# Test the feature of an appliance agains a data object
+	def test_feature(self, data):
+		if 'uid' not in data:
+			raise Exception("{self.name}. Unable to configure appliance. UID is required.")
+
+		if isinstance(data['uid'], int) == False:
+			raise Exception("{self.name}. Unable to configure appliance. UID must be an integer.")
+
+		if 'value' not in data:
+			raise Exception("{self.name}. Unable to configure appliance. Value is required.")
+
+		# Check if the uid is present for this appliance
+		uid = str(data['uid'])
+		if uid not in self.features:
+			raise Exception(f"{self.name}. Unable to configure appliance. UID {uid} is not valid.")
+
+		feature = self.features[uid]
+
+		# check the access level of the feature
+		print(now(), self.name, f"Processing feature {feature['name']} with uid {uid}")
+		if 'access' not in feature:
+			raise Exception(f"{self.name}. Unable to configure appliance. Feature {feature['name']} with uid {uid} does not have access.")
+
+		access = feature['access'].lower()
+		if access != 'readwrite' and access != 'writeonly':
+			raise Exception(f"{self.name}. Unable to configure appliance. Feature {feature['name']} with uid {uid} has got access {feature['access']}.")
+
+		# check if selected list with values is allowed
+		if 'values' in feature:
+			if isinstance(data['value'], int) == False:
+				raise Exception(f"Unable to configure appliance. The value {data['value']} must be an integer. Allowed values are {feature['values']}.")
+			value = str(data['value']) # values are strings in the feature list, but always seem to be an integer. An integer must be provided
+			if value not in feature['values']:
+				raise Exception(f"{self.name}. Unable to configure appliance. Value {data['value']} is not a valid value. Allowed values are {feature['values']}.")
+
+		if 'min' in feature:
+			min = int(feature['min'])
+			max = int(feature['min'])
+			if isinstance(data['value'], int) == False or data['value'] < min or data['value'] > max:
+				raise Exception(f"{self.name}. Unable to configure appliance. Value {data['value']} is not a valid value. The value must be an integer in the range {min} and {max}.")
+
+		return True
+
 	def recv(self):
 		try:
 			buf = self.ws.recv()
 			if buf is None:
 				return None
 		except Exception as e:
-			print("receive error", e, traceback.format_exc())
+			print(self.name, "receive error", e, traceback.format_exc())
 			return None
 
 		try:
 			return self.handle_message(buf)
 		except Exception as e:
-			print("error handling msg", e, buf, traceback.format_exc())
+			print(self.name, "error handling msg", e, buf, traceback.format_exc())
 			return None
 
 	# reply to a POST or GET message with new data
@@ -129,17 +173,24 @@ class HCDevice:
 		}
 
 		if data is not None:
-			msg["data"] = [data]
+			if action == "POST":
+				if self.test_feature(data) != True:
+					return
+				msg["data"] = [data]
+			else:
+				msg["data"] = [data]
 
-		self.ws.send(msg)
+		try:
+			self.ws.send(msg)
+		except Exception as e:
+			print(self.name, "Failed to send", e, msg, traceback.format_exc())
 		self.tx_msg_id += 1
 
 	def handle_message(self, buf):
 		msg = json.loads(buf)
 		if self.debug:
-			print(now(), "RX:", msg)
+			print(now(), self.name, "RX:", msg)
 		sys.stdout.flush()
-
 
 		resource = msg["resource"]
 		action = msg["action"]
@@ -147,7 +198,7 @@ class HCDevice:
 		values = {}
 
 		if "code" in msg:
-			#print(now(), "ERROR", msg["code"])
+			print(now(), self.name, "ERROR", msg["code"])
 			values = {
 				"error": msg["code"],
 				"resource": msg.get("resource", ''),
@@ -186,7 +237,7 @@ class HCDevice:
 				self.get("/ro/allMandatoryValues")
 				#self.get("/ro/values")
 			else:
-				print(now(), "Unknown resource", resource, file=sys.stderr)
+				print(now(), self.name, "Unknown resource", resource, file=sys.stderr)
 
 		elif action == "RESPONSE" or action == "NOTIFY":
 			if resource == "/iz/info" or resource == "/ci/info":
@@ -204,7 +255,10 @@ class HCDevice:
 
 			elif resource == "/ro/allMandatoryValues" \
 			or resource == "/ro/values":
-				values = self.parse_values(msg["data"])
+				if 'data' in msg:
+					values = self.parse_values(msg["data"])
+				else:
+					print(now(), self.name, f"received {msg}")
 			elif resource == "/ci/registeredDevices":
 				# we don't care
 				pass
@@ -215,7 +269,7 @@ class HCDevice:
 					self.services[service["service"]] = {
 						"version": service["version"],
 					}
-				#print(now(), "services", self.services)
+				#print(self.name, now(), "services", self.services)
 
 				# we should figure out which ones to query now
 #				if "iz" in self.services:
@@ -227,8 +281,8 @@ class HCDevice:
 
 				#self.get("/if/info")
 
-			else:
-				print(now(), "Unknown", msg)
+		else:
+			print(now(), self.name, "Unknown", msg)
 
 		# return whatever we've parsed out of it
 		return values

@@ -17,21 +17,41 @@ from HCSocket import HCSocket, now
 @click.argument("config_file")
 @click.option("-h", "--mqtt_host", default="localhost")
 @click.option("-p", "--mqtt_prefix", default="homeconnect/")
-def hc2mqtt(config_file: str, mqtt_host: str, mqtt_prefix: str):
-	click.echo(f"Hello {config_file=} {mqtt_host=} {mqtt_prefix=}")
+@click.option("--mqtt_port", default=1883, type=int)
+@click.option("--mqtt_username")
+@click.option("--mqtt_password")
+@click.option("--mqtt_ssl", is_flag=True)
+@click.option("--mqtt_cafile")
+@click.option("--mqtt_certfile")
+@click.option("--mqtt_keyfile")
+def hc2mqtt(config_file: str, mqtt_host: str, mqtt_prefix: str, mqtt_port: int, mqtt_username: str,
+			mqtt_password: str, mqtt_ssl: bool, mqtt_cafile: str, mqtt_certfile: str, mqtt_keyfile: str):
+	click.echo(f"Hello {config_file=} {mqtt_host=} {mqtt_prefix=} {mqtt_port=} {mqtt_username=} {mqtt_password=} "
+			   f"{mqtt_ssl=} {mqtt_cafile=} {mqtt_certfile=} {mqtt_keyfile=}")
 
 	with open(config_file, "r") as f:
 		devices = json.load(f)
 
 	client = mqtt.Client()
-	client.connect(host=mqtt_host, port=1883, keepalive=70)
+
+	if mqtt_username and mqtt_password:
+		client.username_pw_set(mqtt_username, mqtt_password)
+
+	if mqtt_ssl:
+		if mqtt_cafile and mqtt_certfile and mqtt_keyfile:
+			client.tls_set(ca_certs=mqtt_cafile, certfile=mqtt_certfile, keyfile=mqtt_keyfile, cert_reqs=ssl.CERT_REQUIRED)
+		else:
+			client.tls_set(cert_reqs=ssl.CERT_NONE)
+
+	client.connect(host=mqtt_host, port=mqtt_port, keepalive=70)
 
 	for device in devices:
 		mqtt_topic = mqtt_prefix + device["name"]
+		print(now(), f"topic: {mqtt_topic}")
 		thread = Thread(target=client_connect, args=(client, device, mqtt_topic))
 		thread.start()
 
-
+	client.loop_forever()
 
 # Map their value names to easier state names
 topics = {
@@ -45,19 +65,36 @@ topics = {
 	"FatalErrorOccured": "error",
 }
 
-
-
 def client_connect(client, device, mqtt_topic):
+	def on_message(client, userdata, msg):
+		global dev
+		mqtt_state = msg.payload.decode()
+		print(now(),f"received mqtt message {mqtt_state}")
+		try:
+			msg = json.loads(mqtt_state)
+			if 'uid' in msg:
+				dev.get("/ro/values",1,"POST",msg)
+			else:
+				raise Exception(f"Payload {msg} is not correctly formatted")
+		except Exception as e:
+			print("ERROR", e, file=sys.stderr)
+
+	global dev
 	host = device["host"]
 
 	state = {}
 	for topic in topics:
 		state[topics[topic]] = None
 
+	mqtt_set_topic = mqtt_topic + "/set"
+	print(now(), device["name"], f"set topic: {mqtt_set_topic}")
+	client.subscribe(mqtt_set_topic)
+	client.on_message = on_message
+
 	while True:
 		try:
 			ws = HCSocket(host, device["key"], device.get("iv",None))
-			dev = HCDevice(ws, device.get("features", None))
+			dev = HCDevice(ws, device.get("features", None), device["name"])
 
 			#ws.debug = True
 			ws.reconnect()
@@ -67,7 +104,7 @@ def client_connect(client, device, mqtt_topic):
 				if msg is None:
 					break
 				if len(msg) > 0:
-					print(now(), msg)
+					print(now(), device["name"], msg)
 
 				update = False
 				for topic in topics:
@@ -93,7 +130,7 @@ def client_connect(client, device, mqtt_topic):
 					continue
 
 				msg = json.dumps(state)
-				print("publish", mqtt_topic, msg)
+				print(now(), device["name"], f"publish to {mqtt_topic} with {msg}")
 				client.publish(mqtt_topic + "/state", msg)
 
 		except Exception as e:
