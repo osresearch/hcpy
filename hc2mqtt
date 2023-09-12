@@ -12,7 +12,6 @@ import paho.mqtt.client as mqtt
 from HCDevice import HCDevice
 from HCSocket import HCSocket, now
 
-
 @click.command()
 @click.argument("config_file")
 @click.option("-h", "--mqtt_host", default="localhost")
@@ -24,15 +23,16 @@ from HCSocket import HCSocket, now
 @click.option("--mqtt_cafile")
 @click.option("--mqtt_certfile")
 @click.option("--mqtt_keyfile")
+@click.option("--mqtt_clientname")
 def hc2mqtt(config_file: str, mqtt_host: str, mqtt_prefix: str, mqtt_port: int, mqtt_username: str,
-			mqtt_password: str, mqtt_ssl: bool, mqtt_cafile: str, mqtt_certfile: str, mqtt_keyfile: str):
+			mqtt_password: str, mqtt_ssl: bool, mqtt_cafile: str, mqtt_certfile: str, mqtt_keyfile: str, mqtt_clientname: str):
 	click.echo(f"Hello {config_file=} {mqtt_host=} {mqtt_prefix=} {mqtt_port=} {mqtt_username=} {mqtt_password=} "
-			   f"{mqtt_ssl=} {mqtt_cafile=} {mqtt_certfile=} {mqtt_keyfile=}")
+			   f"{mqtt_ssl=} {mqtt_cafile=} {mqtt_certfile=} {mqtt_keyfile=} {mqtt_clientname=}")
 
 	with open(config_file, "r") as f:
 		devices = json.load(f)
 
-	client = mqtt.Client()
+	client = mqtt.Client(mqtt_clientname)
 
 	if mqtt_username and mqtt_password:
 		client.username_pw_set(mqtt_username, mqtt_password)
@@ -55,36 +55,40 @@ def hc2mqtt(config_file: str, mqtt_host: str, mqtt_prefix: str, mqtt_port: int, 
 
 # Map their value names to easier state names
 topics = {
-	"OperationState": "state",
-	"DoorState": "door",
-	"RemainingProgramTime": "remaining",
-	"PowerState": "power",
-	"LowWaterPressure": "lowwaterpressure",
-	"AquaStopOccured": "aquastop",
-	"InternalError": "error",
-	"FatalErrorOccured": "error",
+	"InternalError": "Error",
+	"FatalErrorOccured": "Error",
 }
+global dev
+dev = {}
 
 def client_connect(client, device, mqtt_topic):
 	def on_message(client, userdata, msg):
-		global dev
+		print(msg.topic)
 		mqtt_state = msg.payload.decode()
+		mqtt_topic = msg.topic.split('/')
 		print(now(),f"received mqtt message {mqtt_state}")
 		try:
 			msg = json.loads(mqtt_state)
 			if 'uid' in msg:
-				dev.get("/ro/values",1,"POST",msg)
+				dev[mqtt_topic[-2]].get("/ro/values",1,"POST",msg)
 			else:
 				raise Exception(f"Payload {msg} is not correctly formatted")
 		except Exception as e:
 			print("ERROR", e, file=sys.stderr)
 
-	global dev
 	host = device["host"]
+	device_topics = topics
+
+	for value in device["features"]:
+		if "access" in device["features"][value] and "read" in device["features"][value]['access'].lower():
+			name = device["features"][value]['name'].split(".")
+			device_topics[name[-1]] = name[-1]
+			device_topics[value] = name[-1] #sometimes the returned key is a digit, making translation possible
 
 	state = {}
-	for topic in topics:
-		state[topics[topic]] = None
+	for topic in device_topics:
+		if not topic.isdigit(): #We only want the named topics
+			state[device_topics[topic]] = None
 
 	mqtt_set_topic = mqtt_topic + "/set"
 	print(now(), device["name"], f"set topic: {mqtt_set_topic}")
@@ -93,36 +97,32 @@ def client_connect(client, device, mqtt_topic):
 
 	while True:
 		try:
+			print(now(), device["name"], f"connecting to {host}")
 			ws = HCSocket(host, device["key"], device.get("iv",None))
-			dev = HCDevice(ws, device.get("features", None), device["name"])
+			dev[device["name"]] = HCDevice(ws, device.get("features", None), device["name"])
 
 			#ws.debug = True
 			ws.reconnect()
 
 			while True:
-				msg = dev.recv()
+				msg = dev[device["name"]].recv()
 				if msg is None:
 					break
 				if len(msg) > 0:
 					print(now(), device["name"], msg)
 
 				update = False
-				for topic in topics:
+				for topic in device_topics:
 					value = msg.get(topic, None)
 					if value is None:
 						continue
 
-					# Convert "On" to True, "Off" to False
-					if value == "On":
-						value = True
-					elif value == "Off":
-						value = False
+				#	new_topic = topics[topic]
+				#	if new_topic == "remaining":
+				# 		state["remainingseconds"] = value
+				# 		value = "%d:%02d" % (value / 60 / 60, (value / 60) % 60)
 
-					new_topic = topics[topic]
-					if new_topic == "remaining":
-						state["remainingseconds"] = value
-						value = "%d:%02d" % (value / 60 / 60, (value / 60) % 60)
-
+					new_topic = device_topics[topic]
 					state[new_topic] = value
 					update = True
 

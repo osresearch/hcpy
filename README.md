@@ -71,22 +71,7 @@ library.
 
 Example message published to `homeconnect/dishwasher`:
 
-```
-{
-	"state":	"Run",
-	"door":		"Closed",
-	"remaining":	"2:49",
-	"power":	true,
-	"lowwaterpressure": false,
-	"aquastop":	false,
-	"error":	false,
-	"remainingseconds": 10140
-}
-```
-
 <details>
-<summary>Full state information</summary>
-
 ```
 {
 	'AllowBackendConnection': False,
@@ -154,7 +139,6 @@ Example message published to `homeconnect/dishwasher`:
 ```
 </details>
 
-
 ### Clothes washer
 
 ![laptop in a clothes washer](images/clotheswasher.jpg)
@@ -167,21 +151,7 @@ binary data over the websocket (type 0x82).
 
 Example message published to `homeconnect/washer`:
 
-```
-{
-	"state": "Ready",
-	"door": "Closed",
-	"remaining": "3:48",
-	"power": true,
-	"lowwaterpressure": false,
-	"aquastop": false,
-	"error": false,
-	"remainingseconds": 13680
-}
-```
-
 <details>
-<summary>Full state information</summary>
 
 ```
 {
@@ -252,11 +222,9 @@ Example message published to `homeconnect/washer`:
 
 ![Image of the coffee machine from the Siemens website](images/coffee.jpg)
 
-The coffee machine needs a better mapping to MQTT messages.
+Example message published to `homeconnect/coffeemaker`:
 
 <details>
-<summary>Full state information</summary>
-
 ```
 {
 	'LastSelectedBeverage': 8217,
@@ -400,3 +368,20 @@ Synchronize with time server, `false` is disabled
 ## FRIDA tools
 
 Moved to [`README-frida.md`](README-frida.md)
+
+## Home assistant
+
+For integration with Home Assistant, the following MQTT sensor can be used to create a read only sensor
+
+```yaml
+- unique_id: "coffee_machine"
+  name: "Coffee Machine"
+  state_topic: "homeconnect/coffeemaker/state"
+  value_template: "{{ value_json.PowerState }}"
+  json_attributes_topic: "homeconnect/coffeemaker/state"
+  json_attributes_template: "{{ value_json | tojson }}"
+```
+
+## Notes
+- Sometimes when the device is off, there is the error `ERROR [ip] [Errno 113] No route to host`
+- There is a lot more information available, like the status of a program that is currently active. This needs to be integrated if possible. For now only the values that relate to the `config.json` are published
