@@ -4,7 +4,7 @@
 # A really nice walk through of how it works is:
 # https://auth0.com/docs/get-started/authentication-and-authorization-flow/call-your-api-using-the-authorization-code-flow-with-pkce
 import requests
-from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from lxml import html
 import io
 import re
@@ -13,6 +13,7 @@ import json
 from time import time
 from base64 import b64decode as base64_decode
 from base64 import urlsafe_b64encode as base64url_encode
+from bs4 import BeautifulSoup
 from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA256
 from zipfile import ZipFile
@@ -124,44 +125,40 @@ while True:
 	r = session.get(preauth_url, allow_redirects=False)
 	if r.status_code == 200:
 		break
-	if r.status_code == 302 or r.status_code == 301:
+	if r.status_code > 300 and r.status_code < 400:
 		preauth_url = r.headers["location"]
+		# Make relative locations absolute
+		if not bool(urlparse(preauth_url).netloc):
+			preauth_url = singlekey_host + preauth_url
 		continue
 	print(f"2: {preauth_url=}: failed to fetch {r} {r.text}", file=sys.stderr)
 	exit(1)
 
 # get the ReturnUrl from the response
 query = parse_qs(urlparse(preauth_url).query)
-return_url = query["ReturnUrl"][0]
+return_url = query["returnUrl"][0]
 debug(f"{return_url=}")
 
-headers["RequestVerificationToken"] = r.cookies["X-CSRF-FORM-TOKEN"]
+if "X-CSRF-FORM-TOKEN" in r.cookies:
+	headers["RequestVerificationToken"] = r.cookies["X-CSRF-FORM-TOKEN"]
 session.headers.update(headers)
 
 debug("--------")
 
-valid_url = singlekey_host + '/auth/api/v1/authentication/UserExists'
-auth_url = singlekey_host + '/auth/api/v1/authentication/login'
+soup = BeautifulSoup(r.text, 'html.parser')
+requestVerificationToken = soup.find('input', {'name': '__RequestVerificationToken'}).get('value')
+r = session.post(preauth_url, data={"UserIdentifierInput.EmailInput.StringValue": email, "__RequestVerificationToken": requestVerificationToken }, allow_redirects=False)
 
-r = session.post(valid_url, json={"username": email})
-debug(f"{valid_url=}: {r} {r.text}")
+password_url = r.headers['location']
+if not bool(urlparse(password_url).netloc):
+	password_url = singlekey_host + password_url
 
+r = session.get(password_url, allow_redirects=False)
+soup = BeautifulSoup(r.text, 'html.parser')
+requestVerificationToken = soup.find('input', {'name': '__RequestVerificationToken'}).get('value')
 
-login_fields = {
-	"username": email,
-	"password": password,
-	"keepMeSignedIn": False,
-	"returnUrl": return_url,
-}
-	
-r = session.post(auth_url, json=login_fields, allow_redirects=False)
+r = session.post(password_url, data={"Password": password, "RememberMe": "false", "__RequestVerificationToken": requestVerificationToken }, allow_redirects=False)
 
-if r.status_code != 200:
-	debug(f"auth failed: {auth_url=}, {login_fields=} {r} {r.text}")
-	exit(-1)
-
-debug(f"{auth_url=}, {r} {r.text}")
-return_url = json.loads(r.text)["returnUrl"]
 if return_url.startswith("/"):
 	return_url = singlekey_host + return_url
 
