@@ -16,12 +16,25 @@ and should prevent most any random attacker on your network from being able to
 
 ## Setup
 
-```python3
+To avoid running into issues later with your default python installs, it's recommended to use a py virtual env for doing this. Go to your desired test directory, and:
+```
+python3 -m venv venv
+source venv/bin/activate
+git clone https://github.com/osresearch/hcpy
+cd hcpy
 pip3 install -r requirements.txt
 ```
 
 Install the Python dependencies; the `sslpsk` one is a little weird
 and we might need to revisit it later.
+
+
+### For Mac Users
+Installing `sslpsk` needs some extra steps:
+
+1. The openssl package installed via brew: `brew install openssl`, and
+1. Install `saslpsk` separately with flags: `LDFLAGS="-L$(brew --prefix openssl)/lib" CFLAGS="-I$(brew --prefix openssl)/include" pip3 install sslpsk`
+1. Rest of the requirements should be fine with `pip3 install -r requirements.txt`
 
 ## Authenticate to the cloud servers
 

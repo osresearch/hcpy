@@ -6,3 +6,4 @@ sslpsk
 paho.mqtt
 lxml
 click
+requests
