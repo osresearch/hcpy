@@ -33,7 +33,7 @@ and we might need to revisit it later.
 Installing `sslpsk` needs some extra steps:
 
 1. The openssl package installed via brew: `brew install openssl`, and
-1. Install `saslpsk` separately with flags: `LDFLAGS="-L$(brew --prefix openssl)/lib" CFLAGS="-I$(brew --prefix openssl)/include" pip3 install sslpsk`
+1. Install `sslpsk` separately with flags: `LDFLAGS="-L$(brew --prefix openssl)/lib" CFLAGS="-I$(brew --prefix openssl)/include" pip3 install sslpsk`
 1. Rest of the requirements should be fine with `pip3 install -r requirements.txt`
 
 ## Authenticate to the cloud servers
