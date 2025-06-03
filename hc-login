@@ -136,7 +136,7 @@ while True:
 
 # get the ReturnUrl from the response
 query = parse_qs(urlparse(preauth_url).query)
-return_url = query["returnUrl"][0]
+return_url = query["ReturnUrl"][0]
 debug(f"{return_url=}")
 
 if "X-CSRF-FORM-TOKEN" in r.cookies:
