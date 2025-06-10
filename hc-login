@@ -168,6 +168,8 @@ while True:
 	if r.status_code != 302:
 		break
 	return_url = r.headers["location"]
+	if return_url.startswith("/"):
+		return_url = singlekey_host + return_url
 	if return_url.startswith("hcauth://"):
 		break
 debug(f"{return_url=}")
